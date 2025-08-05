@@ -80,7 +80,7 @@ def gacha_form(label, file_id, Included, index, serie_exclude):
     return filtered, num_key, "gacha" if gacha_mode else "manual", manual_choices_key
 
 def main():
-
+    excluded_include = []
     st.title("Hazard Trigger")
 
     folder_id = drive_ops.select_working_folder()
@@ -213,8 +213,33 @@ def main():
                                 else:
                                     st.markdown(f"- {value}")
 
+                default_set_lines = drive_ops.get_or_cache_data(
+                    key=f"include_section_{file_id}_default_built",
+                    loader_func=lambda: drive_ops.extract_bullet_items_from_section(file_id, "Default_Built"),
+                    dependencies={"file_id": file_id, "section": "Default_Built"}
+                )
+                default_prompt = []
+                default_entries = []  # Danh sách tuple (category, value)
+
+                # Bước 1: Parse các dòng và lưu từng cặp (category, value)
+                for line in default_set_lines:
+                    match_1 = re.match(r'-\s*(.*?):\s*(.+)', line)
+                    if match_1:
+                        category = match_1.group(1).strip()
+                        value = match_1.group(2).strip()
+                        default_entries.append((category, value))
+
+                # Bước 2: Hiển thị checkbox
+                with st.expander("Thành phần Built Sẵn", expanded=True):
+                    for category, value in default_entries:
+                        take_default = st.checkbox(f"Lấy {category}?", value=True, key=f"laplace_{file_id + category}")
+                        if take_default:
+                            default_prompt.append(value)  # Ghép chuỗi
+                            excluded_include.append(category)
+                if default_prompt != []:
+                    Prompt.extend(default_prompt)
                 include_lines = drive_ops.get_or_cache_data(
-                    key=f"include_section_{file_id}",
+                    key=f"include_section_{file_id}_sidebar",
                     loader_func=lambda: drive_ops.extract_bullet_items_from_section(file_id, "Include"),
                     dependencies={"file_id": file_id, "section": "Include"}
                 )
@@ -223,25 +248,24 @@ def main():
                 include_number = []
 
                 for line in include_lines:
-                    match = re.match(r'-\s*\[\[(.*?)\]\]\s*\|\s*(\d+)', line)
+                    match = re.match(r'-\s*(?:(.*?):\s*)?\[\[(.*?)\]\]\s*\|\s*(\d+)', line)
                     if match:
-                        component_name = match.group(1)
-                        quantity = match.group(2)
+                        category_name = match.group(1)
+                        component_name = match.group(2)
+                        quantity = match.group(3)
                         include_list.append(component_name)
                         include_number.append(quantity)
-
                 if include_list:
                     with st.expander("📦 Thành phần Include", expanded=False):
                         for i in range(len(include_list)):
-                            st.markdown(
-                                f"- <span style='color:#0073ff'><b>{include_list[i]}</b></span>: {include_number[i]}",
-                                unsafe_allow_html=True
-                            )
-                            Include_List.extend(include_list)
-                            Include_Num.extend(include_number)
-
+                            include_or_not = st.checkbox(f"- {include_list[i]}: {include_number[i]}", value=include_list[i] not in excluded_include, key=f'{include_list[i]}.included')
+                            if include_or_not:
+                                Include_List.extend(include_list)
+                                Include_Num.extend(include_number)
         tab_labels = ["🎮 Gacha Chính", "Components", "Sorted_Components"]
         tabs = st.tabs(tab_labels)
+
+
 
         # Bổ sung xử lý Sorted_Components
         sorted_components_folders = [
@@ -270,6 +294,7 @@ def main():
                 for folder in sorted_component_folders:
                     folder_name = folder["name"]
                     folder_id = folder["id"]
+                    Burst_Mode = folder_name in Include_List
 
                     st.markdown(
                         f"<h3 style='color:#00bfff;'>📦 Sorted - {folder_name}</h3>",
@@ -298,8 +323,34 @@ def main():
                         st.info("Không có file .md nào trong thư mục.")
                         continue
 
-                    for selected in md_files:
-                        file_id = selected["id"]
+                    use_random = st.checkbox("🎲 Random chọn 1 file", value=Burst_Mode, key=f"use_random_{folder_id}")
+                    if use_random:
+                        selected_file = random.choice(md_files)
+                        st.info(f"🎲 Đã chọn ngẫu nhiên: **{selected_file['name'].removesuffix('.md')}**")
+                    else:
+                    # Tìm file trùng với Include_List (ưu tiên file đầu tiên match)
+                        default_file = ""
+                        for f in md_files:
+                            base_name = f["name"].removesuffix(".md")
+                            if base_name in Include_List:
+                                default_file = f
+                                break
+
+                        # Tạo selectbox
+                        selected_file = st.selectbox(
+                            f"📄 Chọn file Markdown trong {folder_name}",
+                            options=[""] + md_files,
+                            format_func=lambda f: f["name"].removesuffix(".md") if isinstance(f, dict) else "",
+                            index=([""] + md_files).index(default_file) if default_file else 0,
+                            key=f"selected_md_file_{folder_id}"
+                        )
+
+
+
+                    if selected_file:
+                        file_id = selected_file["id"]
+
+                        # --- YAML ---
                         yaml_data = drive_ops.get_or_cache_data(
                             key=f"yaml_{file_id}",
                             loader_func=lambda: drive_ops.extract_yaml_from_file_id(file_id),
@@ -311,7 +362,7 @@ def main():
                             Negative.extend(yaml_data.get("Negative", []))
                             Exclude.extend(yaml_data.get("Exclude", []))
 
-                            with st.expander(f"🧾 YAML - {selected['name']}", expanded=False):
+                            with st.expander(f"🧾 YAML - {selected_file['name']}", expanded=False):
                                 for key, value in yaml_data.items():
                                     st.markdown(
                                         f"<h4 style='color:#DAA520;'>🔹 <b>{key}</b></h4>",
@@ -323,8 +374,9 @@ def main():
                                     else:
                                         st.markdown(f"- {value}")
 
+                        # --- Include ---
                         include_lines = drive_ops.get_or_cache_data(
-                            key=f"include_section_{file_id}",
+                            key=f"include_section_{file_id}_Include",
                             loader_func=lambda: drive_ops.extract_bullet_items_from_section(file_id, "Include"),
                             dependencies={"file_id": file_id, "section": "Include"}
                         )
@@ -333,15 +385,17 @@ def main():
                         include_number = []
 
                         for line in include_lines:
-                            match = re.match(r'-\s*\[\[(.*?)\]\]\s*\|\s*(\d+)', line)
+                            match = re.match(r'-\s*(?:(.*?):\s*)?\[\[(.*?)\]\]\s*\|\s*(\d+)', line)
                             if match:
-                                component_name = match.group(1)
-                                quantity = match.group(2)
+                                category_name = match.group(1)
+                                component_name = match.group(2)
+                                quantity = match.group(3)
+
                                 include_list.append(component_name)
                                 include_number.append(quantity)
 
                         if include_list:
-                            with st.expander(f"📦 Include - {selected['name']}", expanded=False):
+                            with st.expander(f"📦 Include - {selected_file['name']}", expanded=False):
                                 for i in range(len(include_list)):
                                     st.markdown(
                                         f"- <span style='color:#0073ff'><b>{include_list[i]}</b></span>: {include_number[i]}",
@@ -349,6 +403,7 @@ def main():
                                     )
                                     Include_List.append(include_list[i])
                                     Include_Num.append(include_number[i])
+
 
         results_dict = {}
         num_items_dict = {}
