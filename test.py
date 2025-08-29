@@ -444,4 +444,206 @@ def main():
                                 include_list = []
                                 include_number = []
 
-                      
+
+  
+                                for line in include_lines:
+                                    match = re.match(r'-\s*(?:(.*?):\s*)?\[\[(.*?)\]\]\s*\|\s*(.*)', line)
+                                    if match:
+                                        category_name = match.group(1)
+                                        component_name = match.group(2)
+                                        quantity = match.group(3)
+
+                                        include_list.append(component_name)
+                                        include_number.append(quantity)
+
+                                if include_list:
+                                    with st.expander(f"📦 Include - {selected_file['name']}", expanded=False):
+                                        for i in range(len(include_list)):
+                                            st.markdown(
+                                                f"- <span style='color:#0073ff'><b>{include_list[i]}</b></span>: {include_number[i]}",
+                                                unsafe_allow_html=True
+                                            )
+                                            Include_List.append(include_list[i])
+                                            Include_Num.append(include_number[i])
+
+        all_gacha_prompts = []
+        serie_exclude = Exclude
+
+        with tabs[1]:
+            serie_include, include_numbering = merge_lists(Include_List, Include_Num)
+            setof_serie_include = set(serie_include)
+
+            # Nhóm subfolders theo parents
+            grouped = {}
+            for item in component_subfolders:
+                parent = item.get("parents", [None])[0]  # fallback nếu không có parents
+                grouped.setdefault(parent, []).append(item)
+                
+            tree_compo = drive_ops.build_tree(component_contents)
+            x, compo_memo = drive_ops.collect(components_folder_id, tree_compo, components_change)
+            # Render theo nhóm
+            for parent, items in grouped.items():
+                with st.expander(f"📂 {parent}", expanded=False):
+                    for item in items:
+                        Included = False
+                        index = ({None: 1},)
+                        label = item["name"]
+                        if label in serie_include:
+                            idx = serie_include.index(label)
+                            raws = include_numbering.pop(idx)
+                            serie_include.pop(idx)
+
+                            # Tách theo dấu phẩy
+                            parts = [part.strip() for part in raws.split(",")]
+
+                            # Tạo tuple chứa nhiều dict
+                            index = tuple(
+                                ({key.strip(): int(val.strip())} if ":" in raw else {None: int(raw.strip())})
+                                for raw in parts
+                                for key, val in ([raw.split(":")] if ":" in raw else [(None, raw)])
+                            )
+                            Included = True
+
+                        # Gọi gacha_form
+                        filtered, gacha_prompts = gacha_form(label, item["id"], Included, index, serie_exclude, components_change, compo_memo)
+
+                        all_gacha_prompts.extend(gacha_prompts)
+
+                        flat = [s.strip() for f in filtered for s in f.split(",")]
+                        classified[label] = set(flat)
+
+
+
+        with tabs[3]:
+            merged = classified
+            reverse_classified = {}
+            for key, container in merged.items():
+                for item in container:
+                    reverse_classified[item] = key
+            user_prompt = st.text_input("Prompt: ", value="", key="classsing_prompting")
+            stripped_prompt_to_classify = [s.strip() for s in user_prompt.split(",") if s.strip()]
+            # Tạo sorted_dict rỗng
+            sorted_dict = {}
+
+            # Đối chiếu và phân loại
+            for elem in stripped_prompt_to_classify:
+                key = reverse_classified.get(elem, "_Wild")
+                if key not in sorted_dict:
+                    sorted_dict[key] = []
+                sorted_dict[key].append(elem)
+            with st.expander("Sorted", expanded=True):
+                for key in sorted(sorted_dict.keys()):
+                    # Header có màu (dùng markdown)
+                    st.markdown(
+                        f"<h4 style='color:#7300ff; margin-top:0'>{key}</h4>",
+                        unsafe_allow_html=True
+                    )
+                    items_html = "<br>".join(f"- {item}" for item in sorted(sorted_dict[key]))
+                    st.markdown(
+                        f"""
+                        <div style="max-height: 200px; overflow-y: auto; 
+                                    padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
+                            {items_html}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+        # Tab Gacha Chính
+        with tabs[0]:
+            Init_Prompt = st.text_input("Prompt Gốc: ", value="", key="input_init_intro")
+            Lora_Prompt = st.text_input(
+                "Prompt Lora: ",
+                value="best quality",
+                key="Lora_outa_outro"
+            )
+            st.subheader("✨ Quay Gacha Tất Cả")
+
+            if st.button("🎲 Quay!"):
+
+                # Xử lý prompt và negative
+                serie_prompt = Prompt
+                serie_negative = Negative
+                cleaned = [item.strip().strip(",") for item in all_gacha_prompts]
+
+                # Ghép prompt của series (nếu có) và Default_Prompt
+                all_prompts = []
+                if Init_Prompt != "":
+                    all_prompts.append(Init_Prompt)
+                if serie_prompt:
+                    all_prompts.extend([item.strip().strip(",") for item in serie_prompt])
+                all_prompts.extend(cleaned)
+                all_prompts.append(Lora_Prompt)
+                seen = set()
+                unique_prompts = [p for p in all_prompts if not (p in seen or seen.add(p))]
+                joined = ", ".join(unique_prompts)
+                st.subheader("📋 Prompt dạng chuỗi copy được:")
+                st.code(joined, language="text")
+
+                # In Negative riêng nếu có
+                try:
+                    cleaned_neg = serie_negative[0].strip().strip(",")
+                    st.subheader("🚫 Negative Prompt:")
+                    st.code(cleaned_neg, language="text")
+                except:
+                    pass
+            filtered = [
+                (s, n) for s, n in zip(serie_include, include_numbering)
+                if s not in Included_Sorted and n != "0"
+            ]
+
+            if filtered:
+                serie_include, include_numbering = zip(*filtered)
+            else:
+                serie_include, include_numbering = [], []
+
+
+            if serie_include:  # chỉ hiện khi còn phần tử
+                df = pd.DataFrame({
+                    "Include": serie_include,
+                    "Num": include_numbering
+                })
+                st.markdown("⚠️ Các Include sau vẫn còn bỏ ngỏ:")
+                st.table(df)
+
+        with tabs[4]:
+            nums = list(map(float, st.text_input("Các lần sủng ái: ").split()))
+            result = 1.0
+            for i, n in enumerate(nums, start=1):
+                result *= (1 - n/10)
+                Tk = 1 - result
+            if nums: 
+                success = random.random() <= Tk
+                st.markdown(
+                    f"""
+                    <div style="font-size:20px; font-weight:bold;">
+                        Rate = <span style="color:skyblue;">{Tk * 100:.2f}%</span> 
+                        --> <span style="color:{'limegreen' if success else 'crimson'};">
+                            {'✅ Success!' if success else '❌ Pfft- Lucky Next Time'}
+                        </span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            if Instructions_List:
+                st.markdown("## 📋 Hướng dẫn:")
+
+                for i, instr in enumerate(Instructions_List, 1):
+                    st.markdown(f"""
+                    <div style="
+                        border:2px solid #4a90e2;
+                        border-radius:10px;
+                        padding:10px;
+                        margin-bottom:8px;
+                        background-color:#1e1e1e;
+                        color:#ffffff;
+                    ">
+                        <b>🔹 Note {i}:</b> {instr}
+                    </div>
+                    """, unsafe_allow_html=True)
+
+    else:
+        st.info("Vui lòng nhập link thư mục Google Drive ở sidebar.")
+main()
+
+
