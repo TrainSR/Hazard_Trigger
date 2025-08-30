@@ -126,7 +126,7 @@ def list_folder_contents(folder_id, parent = None):
 
     # Lấy danh sách file/folder con
     query = f"'{folder_id}' in parents and trashed = false"
-    fields = "files(id, name, mimeType, parents)"
+    fields = "files(id, name, mimeType, parents, modifiedTime)"
     results = drive_service.files().list(q=query, fields=fields).execute()
     files = results.get("files", [])
 
@@ -175,7 +175,7 @@ def build_tree(items):
         if item["mimeType"] == "application/vnd.google-apps.folder":
             tree[parent_id]["subfolders"].append(item["id"])
         elif item["mimeType"] == "text/markdown":
-            tree[parent_id]["files"].append(item["id"] + "|" + item["name"])
+            tree[parent_id]["files"].append(item["id"] + "|" + item["modifiedTime"] + "|" + item["name"])
     root_id = list(root)[0]
     tree[root_id] = {
         "name": "ROOT",
@@ -190,18 +190,17 @@ def build_tree(items):
 def collect(folder, tree, checkbox, memo=None, folder_all_files=None):
     if memo is None:
         memo = {}
-    if not folder_all_files:
         folder_all_files = {}
-    if folder in memo:
-        return memo[folder], memo, folder_all_files[folder], folder_all_files  # trả thêm memo
+        
     contents = []
     all_files = []
     for file in tree[folder].get("files", []):
         if file.endswith(".md"):          # chỉ xử lý file kết thúc bằng .md
+            fikle_attribute = file.split("|")
             file_content = get_or_cache_data(
                 key=f"folder_contents_{file}",
-                loader_func=lambda: get_file_content(file.split("|")[0]),
-                dependencies={"sorted_compo_id": checkbox}
+                loader_func=lambda: get_file_content(fikle_attribute[0]),
+                dependencies={"sorted_compo_id": fikle_attribute[1]}
             )
             all_files.append(file)
             contents.append(file_content)
