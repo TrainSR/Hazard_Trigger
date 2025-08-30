@@ -9,7 +9,7 @@ from collections import defaultdict
 import pandas as pd
 import random, math
 
-def bounce(num, max_delta=5, k=0.8):
+def bounce(num, max_delta=5, k=2.0):
     deltas = range(-max_delta, max_delta + 1)
     weights = [math.exp(-k * abs(d)) for d in deltas]
     delta = random.choices(deltas, weights=weights, k=1)[0]
@@ -63,16 +63,7 @@ def map_index_to_yaml_flat(index, yaml_data):
 def gacha_form(label, folder_id, Included, index, serie_exclude, components_change, compo_memo):
     folder_data = compo_memo[folder_id]
 
-    yaml_data = {}
-    for ite in folder_data:
-
-        data = drive_ops.get_or_cache_data(
-            key=f"yaml_{ite}_IIOO",
-            loader_func=lambda: drive_ops.extract_yaml(ite),
-            dependencies={"_component_id": components_change}
-        )
-        yaml_data.update(data)
-        st.write(yaml_data)
+    yaml_data = drive_ops.extract_yamls(folder_data)
     if not yaml_data:
         return [], []
     
@@ -131,7 +122,6 @@ def main():
         contents = drive_ops.get_or_cache_data(
             key="root_folder_contents",
             loader_func=lambda: drive_ops.list_folder_contents(folder_id),
-            dependencies={"folder_id": folder_id}
         )
         if contents:
             important_folders = [
@@ -150,7 +140,7 @@ def main():
             else:
                 components_folder_id = components_folders[0]["id"]
 
-                # Bước 2: Liệt kê các file .md trong thư mục Components
+                # Bước 2: Liệt kê các content trong thư mục Components
                 component_contents = drive_ops.get_or_cache_data(
                     key="components_folder_contents",
                     loader_func=lambda: drive_ops.list_folder_contents_recursive(components_folder_id),
@@ -234,7 +224,7 @@ def main():
                     important_file_content = drive_ops.get_or_cache_data(
                         key=f"Important_file_contents_{file_id}",
                         loader_func=lambda: drive_ops.get_file_content(file_id),
-                        dependencies={"sub_folder_important": important_change}
+                        dependencies={"sub_folder_important": selected["modifiedTime"]}
                     )
 
                     yaml_data = drive_ops.extract_yaml(important_file_content)
@@ -322,10 +312,7 @@ def main():
                 dependencies={"sorted_compo_id": sorted_change}
             )
             tree = drive_ops.build_tree(sorted_subfolders)
-            exists = sorted_components_folder_id in tree
-            # st.write(sorted_subfolders)
-            x, sorted_memo = drive_ops.collect(sorted_components_folder_id, tree, sorted_change)
-
+            x, sorted_memo, y, advanced_map_sorted = drive_ops.collect(sorted_components_folder_id, tree, sorted_change)
             sorted_component_folders = sorted(
                 [{"name": item["name"], "id": item["id"], "parents": item["parents"]}
                  for item in sorted_subfolders
@@ -333,21 +320,21 @@ def main():
                 key=lambda x: x["name"].lower()
             )
 
+
             with tabs[2]:  # Tab Sorted_Components
                 # Group folder theo parents
                 grouped_folders = defaultdict(list)
-
                 for folder in sorted_component_folders:
                     parent = folder.get("parents", [None])[0]
-                    grouped_folders[parent].append(folder)
-                # Hiển thị từng nhóm theo parents
-                for parent, folders in grouped_folders.items():
                     mact = next((item for item in sorted_component_folders if item["id"] == parent), None)
                     if mact:
                         Name = mact["name"]
                     else: 
-                        Name = "Sorted"
-                    with st.expander(f"📂 {Name}", expanded=False):
+                        Name = "1. Sorted"
+                    grouped_folders[Name].append(folder)
+                # Hiển thị từng nhóm theo parents
+                for parent, folders in grouped_folders.items():
+                    with st.expander(f"📂 {parent}", expanded=False):
                         for folder in folders:
                             folder_name = folder["name"]
                             folder_id = folder["id"]
@@ -359,19 +346,11 @@ def main():
                             )
 
                             try:
-                                folder_contents = drive_ops.get_or_cache_data(
-                                    key=f"Sorted_folder_contents_{folder_id}",
-                                    loader_func=lambda: drive_ops.list_folder_contents_recursive(folder_id),
-                                    dependencies={"sorted_compo_id": sorted_change}
-                                )
+                                folder_content = advanced_map_sorted[folder_id]
+                                md_files_list = [[s.split('|')[0], s.split('|')[-1]] for s in folder_content]
+                                keys = ["id", "file_name"]
+                                md_files = [dict(zip(keys, item)) for item in md_files_list]
 
-                                md_files = sorted(
-                                    [
-                                        f for f in folder_contents
-                                        if f["mimeType"] != "application/vnd.google-apps.folder" and f["name"].endswith(".md")
-                                    ],
-                                    key=lambda f: f["name"]
-                                )
                             except Exception as e:
                                 st.warning(f"Lỗi khi đọc thư mục: {e}")
                                 continue
@@ -394,7 +373,7 @@ def main():
                                 # Tìm file trùng với Include_List (ưu tiên file đầu tiên match)
                                 default_file = ""
                                 for f in md_files:
-                                    base_name = f["name"].removesuffix(".md")
+                                    base_name = f["file_name"].removesuffix(".md")
                                     if base_name in Include_List:
                                         default_file = f
                                         break
@@ -402,7 +381,7 @@ def main():
                                 selected_file = st.selectbox(
                                     f"📄 Chọn file Markdown trong {folder_name}",
                                     options=[""] + md_files,
-                                    format_func=lambda f: f["name"].removesuffix(".md") if isinstance(f, dict) else "",
+                                    format_func=lambda f: f["file_name"].removesuffix(".md") if isinstance(f, dict) else "",
                                     index=([""] + md_files).index(default_file) if default_file else 0,
                                     key=f"selected_md_file_{folder_id}"
                                 )
@@ -413,7 +392,7 @@ def main():
                                 sorted_file_content = drive_ops.get_or_cache_data(
                                     key=f"Sorted_file_contents_{file_id}",
                                     loader_func=lambda: drive_ops.get_file_content(file_id),
-                                    dependencies={"sorted_compo_id": sorted_change}
+                                    dependencies={"sorted_compo_id": selected_file["modifiedTime"]}
                                 )
 
 
@@ -426,7 +405,7 @@ def main():
                                     Negative.extend(yaml_data.get("Negative", []))
                                     Exclude.extend(yaml_data.get("Exclude", []))
 
-                                    with st.expander(f"🧾 YAML - {selected_file['name']}", expanded=False):
+                                    with st.expander(f"🧾 YAML - {selected_file['file_name']}", expanded=False):
                                         for key, value in yaml_data.items():
                                             st.markdown(
                                                 f"<h4 style='color:#DAA520;'>🔹 <b>{key}</b></h4>",
@@ -444,8 +423,6 @@ def main():
                                 include_list = []
                                 include_number = []
 
-
-  
                                 for line in include_lines:
                                     match = re.match(r'-\s*(?:(.*?):\s*)?\[\[(.*?)\]\]\s*\|\s*(.*)', line)
                                     if match:
@@ -457,7 +434,7 @@ def main():
                                         include_number.append(quantity)
 
                                 if include_list:
-                                    with st.expander(f"📦 Include - {selected_file['name']}", expanded=False):
+                                    with st.expander(f"📦 Include - {selected_file['file_name']}", expanded=False):
                                         for i in range(len(include_list)):
                                             st.markdown(
                                                 f"- <span style='color:#0073ff'><b>{include_list[i]}</b></span>: {include_number[i]}",
@@ -472,17 +449,21 @@ def main():
         with tabs[1]:
             serie_include, include_numbering = merge_lists(Include_List, Include_Num)
             setof_serie_include = set(serie_include)
-
+            tree_compo = drive_ops.build_tree(component_contents)
+            x, compo_memo, y, compo_map_advanced = drive_ops.collect(components_folder_id, tree_compo, components_change)
+            # Render theo nhóm
             # Nhóm subfolders theo parents
             grouped = {}
             for item in component_subfolders:
                 parent = item.get("parents", [None])[0]  # fallback nếu không có parents
-                grouped.setdefault(parent, []).append(item)
-                
-            tree_compo = drive_ops.build_tree(component_contents)
-            x, compo_memo = drive_ops.collect(components_folder_id, tree_compo, components_change)
-            # Render theo nhóm
-            for parent, items in grouped.items():
+                mact_compo = next((item for item in component_subfolders if item["id"] == parent), None)
+                if mact_compo:
+                    Name_compo = mact_compo["name"]
+                else: 
+                    Name_compo = "1. Components"
+                grouped.setdefault(Name_compo, []).append(item)
+
+            for parent, items in sorted(grouped.items()):
                 with st.expander(f"📂 {parent}", expanded=False):
                     for item in items:
                         Included = False
