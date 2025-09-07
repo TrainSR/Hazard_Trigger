@@ -87,9 +87,10 @@ with tab1:
                         old_tag = [t.strip() for t in tag_str.split(",") if t.strip()]
                         break
             valid_old_tags = [t for t in old_tag if t in All_TAGS]
+            sorted_all_tags = sorted(set(All_TAGS))
             with st.form("update_form"):
                 date = st.date_input("📅 Ngày")
-                selected_tags = st.multiselect("🏷️ Chọn tag", set(All_TAGS), default=set(valid_old_tags))
+                selected_tags = st.multiselect("🏷️ Chọn tag", sorted_all_tags, default=set(valid_old_tags))
                 submitted = st.form_submit_button("Cập nhật mô tả")
 
                 if submitted:
