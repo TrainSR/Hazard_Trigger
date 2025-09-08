@@ -54,13 +54,14 @@ if tag_source_links:
             folder_id = extract_id_from_url(line)
             if folder_id:
                 tag_folder_ids.append(folder_id)
-
+S = st.sidebar.text_input("Secret Code: ")
+Checked = S == load_secret_value("app_config", "passcode")
 # Hiển thị danh sách ID đã lấy được
 if tag_folder_ids:
     st.sidebar.success("✅ Đã lấy ID từ các link folder")
 else:
     st.sidebar.info("🔎 Chưa có folder nào được nhập")
-if Default_Tag_Folders:
+if Default_Tag_Folders and Checked:
     tag_folder_ids.extend(Default_Tag_Folders)
 for link in set(tag_folder_ids):
     f = drive_ops.list_folder_contents(link)
