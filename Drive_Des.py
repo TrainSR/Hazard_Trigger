@@ -64,7 +64,7 @@ else:
 if Default_Tag_Folders and Checked:
     tag_folder_ids.extend(Default_Tag_Folders)
 for link in set(tag_folder_ids):
-    f = drive_ops.list_folder_contents(link)
+    f = drive_ops.list_folder_contents_recursive(link)
     names = [item["name"][:-3] for item in f if item.get("mimeType") == "text/markdown"]
     All_TAGS.extend(names)
 # --- TAB 1 ---
