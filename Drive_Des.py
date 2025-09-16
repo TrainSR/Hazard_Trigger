@@ -3,6 +3,7 @@
 import streamlit as st
 import drive_module.drive_ops as drive_ops
 from drive_module.auth import load_secret_value
+import datetime
 
 
 Default_Tag_Folders = load_secret_value("app_config", "tag_folders")
@@ -38,6 +39,22 @@ def update_file_description(file_id, new_description):
         fileId=file_id,
         body={"description": new_description}
     ).execute()
+def parse_description(descrip: str) -> dict:
+    result = {}
+    wild_lines = []
+    for line in descrip.splitlines():
+        if ":" in line:
+            key, value = line.split(":", 1)
+            key = key.strip().lower()
+            value = value.strip()
+            result[key] = value
+        else:
+            if line.strip():  # bỏ qua dòng trống
+                wild_lines.append(line.strip())
+    if wild_lines:
+        result["wild"] = wild_lines
+    return result
+
 
 
 # --- Sidebar: Nguồn tag ---
@@ -76,28 +93,31 @@ with tab1:
         if file_id:
             metadata = get_file_metadata(file_id)
             descrip = metadata.get('description', '(trống)')
+            descrip_dict = parse_description(descrip)
             st.subheader("📂 Đối tượng đã chọn:")
             st.markdown(f"**Tên:** `{metadata['name']}`")
             st.markdown(f"🔍 **Loại:** `{metadata['mimeType']}`")
             st.markdown(f"📄 **Mô tả hiện tại:** `{descrip}`")
             old_tag = []
-            if "tag:" in descrip:
-                for line in descrip.splitlines():
-                    if line.strip().startswith("tag:"):
-                        tag_str = line.replace("tag:", "").strip()
-                        old_tag = [t.strip() for t in tag_str.split(",") if t.strip()]
-                        break
+            st.code(descrip_dict)
+            if "tag" in descrip_dict:
+                old_tag = [t.strip() for t in descrip_dict["tag"].split(",") if t.strip()]
+            if "date" in descrip_dict:
+                default_date = datetime.datetime.strptime(descrip_dict["date"], "%d/%m/%Y").date()   
+            else:
+                default_date = datetime.date.today()
             valid_old_tags = [t for t in old_tag if t in All_TAGS]
             sorted_all_tags = sorted(set(All_TAGS))
             with st.form("update_form"):
-                date = st.date_input("📅 Ngày")
+                date = st.date_input("📅 Ngày", value=default_date)
                 selected_tags = st.multiselect("🏷️ Chọn tag", sorted_all_tags, default=set(valid_old_tags))
                 submitted = st.form_submit_button("Cập nhật mô tả")
+                extra_descrip = st.text_area("📝 Nội dung bổ sung", "\n".join(descrip_dict["wild"]))
 
                 if submitted:
                     date_str = date.strftime("%d/%m/%Y")
                     tag_str = ", ".join(selected_tags)
-                    new_description = f"date: {date_str}\ntag: {tag_str}"
+                    new_description = f"date: {date_str}\ntag: {tag_str}\n{extra_descrip}"
                     update_file_description(file_id, new_description)
                     st.success("✅ Mô tả đã được cập nhật.")
                     st.code(new_description, language="markdown")
