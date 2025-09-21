@@ -72,7 +72,7 @@ def gacha_form(label, folder_id, Included, index, serie_exclude, components_chan
         selected_items = set()
         for key, items in yaml_data.items():
             if isinstance(items, list):
-                selected_items.update(items)
+                selected_items.update(str(x) for x in items)
 
         filtered = sorted(selected_items)
 
@@ -714,7 +714,7 @@ def main():
             Init_Prompt = st.text_input("Prompt Gốc: ", value="", key="input_init_intro")
             Lora_Prompt = st.text_input(
                 "Prompt Lora: ",
-                value="best quality",
+                value="sidelighting, shade, best quality",
                 key="Lora_outa_outro"
             )
             st.subheader("✨ Quay Gacha Tất Cả")
