@@ -52,7 +52,7 @@ def map_index_to_yaml_flat(index, yaml_data):
         if chosen_key:
             items = yaml_data[chosen_key]
             if items:
-                sampled = random.sample(items, min(bounce(num), len(items)))
+                sampled = random.sample(items, min(num, len(items)))
                 flat_list.extend(sampled)
 
     return flat_list
@@ -61,49 +61,19 @@ def map_index_to_yaml_flat(index, yaml_data):
 def gacha_form(label, folder_id, Included, index, serie_exclude, components_change, compo_memo):
     folder_data = compo_memo[folder_id]
 
-    yaml_data = drive_ops.extract_yamls(folder_data)
-    if not yaml_data:
-        return [], []
-    
-    st.markdown(f"<h3 style='color:#0088ff;'>🔎 {label}</h3>", unsafe_allow_html=True)
     
     with st.expander(f"🔎 {label}", expanded=Included):
-
-        selected_items = set()
-        for key, items in yaml_data.items():
-            if isinstance(items, list):
-                selected_items.update(str(x) for x in items)
-
-        filtered = sorted(selected_items)
-
-        st.markdown("🎯 Kết quả sau lọc:")
-        if filtered:
-            st.markdown(
-                f"""
-                <div style="max-height: 300px; overflow-y: auto; padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
-                    {'<br>'.join(f"- {item}" for item in filtered)}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-        else:
-            st.info("Không có phần tử nào để hiển thị.")
-
+        prompts = []
         # Chọn chế độ
         mode_key = f"{label}{folder_id}_mode"
-        st.markdown("\n")
         gacha_mode = st.checkbox(f"Gacha ngẫu nhiên ({label})", value=Included, key=mode_key)
-        manual_choices_key = f"{label}{folder_id}_manual_choices"
-        num_key = f"{label}_num_items"
         if gacha_mode:
+            yaml_data = drive_ops.extract_yamls(folder_data)
+            if not yaml_data:
+                return [], []
             prompts = map_index_to_yaml_flat(index, yaml_data)
-        else:
-            prompts = st.multiselect(
-                f"Chọn thủ công cho {label}:", 
-                options=filtered,
-                key=manual_choices_key
-            )
-    return filtered, prompts
+
+    return prompts
 
 def main():
     Included_Sorted = set()
@@ -616,11 +586,8 @@ def main():
 
         with tabs[1]:
             serie_include, include_numbering = merge_lists(Include_List, Include_Num)
-            setof_serie_include = set(serie_include)
             tree_compo = drive_ops.build_tree(component_contents)
             x, compo_memo, y, compo_map_advanced = drive_ops.collect(components_folder_id, tree_compo, components_change)
-            # Render theo nhóm
-            # Nhóm subfolders theo parents
             grouped = {}
             for item in component_subfolders:
                 parent = item.get("parents", [None])[0]  # fallback nếu không có parents
@@ -654,51 +621,17 @@ def main():
                             Included = True
 
                         # Gọi gacha_form
-                        filtered, gacha_prompts = gacha_form(label, item["id"], Included, index, serie_exclude, components_change, compo_memo)
+                        gacha_prompts = gacha_form(label, item["id"], Included, index, serie_exclude, components_change, compo_memo)
 
                         all_gacha_prompts.extend(gacha_prompts)
 
-                        # flat = [s.strip() for f in filtered for s in f.split(",")]
-                        # classified[label] = set(flat)
-
-
 
         with tabs[3]:
-            # merged = classified
-            # reverse_classified = {}
-            # for key, container in merged.items():
-            #     for item in container:
-            #         reverse_classified[item] = key
             user_prompt = st.text_input("Prompt: ", value="", key="classsing_prompting")
             stripped_prompt_to_classify = [s.strip() for s in user_prompt.split(",") if s.strip()]
             # Tạo sorted_dict rỗng
             unique_lst = list(dict.fromkeys(stripped_prompt_to_classify))
             st.code(", ".join(map(str, unique_lst)))
-            # sorted_dict = {}
-
-            # # Đối chiếu và phân loại
-            # for elem in stripped_prompt_to_classify:
-            #     key = reverse_classified.get(elem, "_Wild")
-            #     if key not in sorted_dict:
-            #         sorted_dict[key] = []
-            #     sorted_dict[key].append(elem)
-            # with st.expander("Sorted", expanded=False):
-            #     for key in sorted(sorted_dict.keys()):
-            #         # Header có màu (dùng markdown)
-            #         st.markdown(
-            #             f"<h4 style='color:#7300ff; margin-top:0'>{key}</h4>",
-            #             unsafe_allow_html=True
-            #         )
-            #         items_html = "<br>".join(f"- {item}" for item in sorted(sorted_dict[key]))
-            #         st.markdown(
-            #             f"""
-            #             <div style="max-height: 200px; overflow-y: auto; 
-            #                         padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
-            #                 {items_html}
-            #             </div>
-            #             """,
-            #             unsafe_allow_html=True
-            #         )
             Prior_Cate_List = sorted(Prior_Cate_List, key=lambda x: x[1])
             dfOP = pd.DataFrame(Prior_Cate_List, columns=["Col", "SortKey", "Row"])
 
