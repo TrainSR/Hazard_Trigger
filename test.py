@@ -658,47 +658,47 @@ def main():
 
                         all_gacha_prompts.extend(gacha_prompts)
 
-                        flat = [s.strip() for f in filtered for s in f.split(",")]
-                        classified[label] = set(flat)
+                        # flat = [s.strip() for f in filtered for s in f.split(",")]
+                        # classified[label] = set(flat)
 
 
 
         with tabs[3]:
-            merged = classified
-            reverse_classified = {}
-            for key, container in merged.items():
-                for item in container:
-                    reverse_classified[item] = key
+            # merged = classified
+            # reverse_classified = {}
+            # for key, container in merged.items():
+            #     for item in container:
+            #         reverse_classified[item] = key
             user_prompt = st.text_input("Prompt: ", value="", key="classsing_prompting")
             stripped_prompt_to_classify = [s.strip() for s in user_prompt.split(",") if s.strip()]
             # Tạo sorted_dict rỗng
             unique_lst = list(dict.fromkeys(stripped_prompt_to_classify))
             st.code(", ".join(map(str, unique_lst)))
-            sorted_dict = {}
+            # sorted_dict = {}
 
-            # Đối chiếu và phân loại
-            for elem in stripped_prompt_to_classify:
-                key = reverse_classified.get(elem, "_Wild")
-                if key not in sorted_dict:
-                    sorted_dict[key] = []
-                sorted_dict[key].append(elem)
-            with st.expander("Sorted", expanded=False):
-                for key in sorted(sorted_dict.keys()):
-                    # Header có màu (dùng markdown)
-                    st.markdown(
-                        f"<h4 style='color:#7300ff; margin-top:0'>{key}</h4>",
-                        unsafe_allow_html=True
-                    )
-                    items_html = "<br>".join(f"- {item}" for item in sorted(sorted_dict[key]))
-                    st.markdown(
-                        f"""
-                        <div style="max-height: 200px; overflow-y: auto; 
-                                    padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
-                            {items_html}
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+            # # Đối chiếu và phân loại
+            # for elem in stripped_prompt_to_classify:
+            #     key = reverse_classified.get(elem, "_Wild")
+            #     if key not in sorted_dict:
+            #         sorted_dict[key] = []
+            #     sorted_dict[key].append(elem)
+            # with st.expander("Sorted", expanded=False):
+            #     for key in sorted(sorted_dict.keys()):
+            #         # Header có màu (dùng markdown)
+            #         st.markdown(
+            #             f"<h4 style='color:#7300ff; margin-top:0'>{key}</h4>",
+            #             unsafe_allow_html=True
+            #         )
+            #         items_html = "<br>".join(f"- {item}" for item in sorted(sorted_dict[key]))
+            #         st.markdown(
+            #             f"""
+            #             <div style="max-height: 200px; overflow-y: auto; 
+            #                         padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
+            #                 {items_html}
+            #             </div>
+            #             """,
+            #             unsafe_allow_html=True
+            #         )
             Prior_Cate_List = sorted(Prior_Cate_List, key=lambda x: x[1])
             dfOP = pd.DataFrame(Prior_Cate_List, columns=["Col", "SortKey", "Row"])
 
@@ -739,6 +739,7 @@ def main():
                 joined = ", ".join(unique_prompts)
                 st.subheader("📋 Prompt dạng chuỗi copy được:")
                 st.code(joined, language="text")
+                st.code(", ".join(cleaned))
 
                 # In Negative riêng nếu có
                 try:
