@@ -92,26 +92,28 @@ with tab1:
         file_id = extract_id_from_url(file_url)
         if file_id:
             metadata = get_file_metadata(file_id)
-            descrip = metadata.get('description', '(trống)')
+            descrip = metadata.get('description', '')
             descrip_dict = parse_description(descrip)
             st.subheader("📂 Đối tượng đã chọn:")
             st.markdown(f"**Tên:** `{metadata['name']}`")
             st.markdown(f"🔍 **Loại:** `{metadata['mimeType']}`")
-            st.markdown(f"📄 **Mô tả hiện tại:** `{descrip}`")
+            st.markdown("📄 Mô tả hiện tại: ")
+            st.code(descrip)
             old_tag = []
-            st.code(descrip_dict)
             if "tag" in descrip_dict:
                 old_tag = [t.strip() for t in descrip_dict["tag"].split(",") if t.strip()]
+                All_TAGS.extend(old_tag)
             if "date" in descrip_dict:
                 default_date = datetime.datetime.strptime(descrip_dict["date"], "%d/%m/%Y").date()   
             else:
                 default_date = datetime.date.today()
-            valid_old_tags = [t for t in old_tag if t in All_TAGS]
             sorted_all_tags = sorted(set(All_TAGS))
             with st.form("update_form"):
                 date = st.date_input("📅 Ngày", value=default_date)
-                selected_tags = st.multiselect("🏷️ Chọn tag", sorted_all_tags, default=set(valid_old_tags))
+                selected_tags = st.multiselect("🏷️ Chọn tag", sorted_all_tags, default=set(old_tag))
                 submitted = st.form_submit_button("Cập nhật mô tả")
+                if "wild" not in descrip_dict:
+                    descrip_dict["wild"] = [""]
                 extra_descrip = st.text_area("📝 Nội dung bổ sung", "\n".join(descrip_dict["wild"]))
 
                 if submitted:
