@@ -31,7 +31,7 @@ def extract_id_from_url(url):
 def get_file_metadata(file_id):
     return drive_service.files().get(
         fileId=file_id,
-        fields="id, name, mimeType, description"
+        fields="id, name, mimeType, description, createdTime"
     ).execute()
 
 def update_file_description(file_id, new_description):
@@ -106,7 +106,7 @@ with tab1:
             if "date" in descrip_dict:
                 default_date = datetime.datetime.strptime(descrip_dict["date"], "%d/%m/%Y").date()   
             else:
-                default_date = datetime.date.today()
+                default_date = datetime.datetime.fromisoformat(metadata['createdTime'].replace("Z", "+00:00")).date()
             sorted_all_tags = sorted(set(All_TAGS))
             with st.form("update_form"):
                 date = st.date_input("📅 Ngày", value=default_date)
