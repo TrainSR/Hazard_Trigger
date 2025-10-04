@@ -77,7 +77,7 @@ def gacha_form(label, folder_id, Included, index, serie_exclude, components_chan
 
 def main():
     Included_Sorted = set()
-    classified = {}
+    List_Defaulter = {}
     Instructions_List = []
     call_list = {}
     Prompt = []
@@ -121,108 +121,111 @@ def main():
                 and item.get("name") == "4. Components"
             ]
 
-            if navigate_folder: 
+            if navigate_folder:
                 st.sidebar.markdown(
                     '<h1 style="color:golden; -webkit-text-stroke:1px blue;">Navigation</h1>',
                     unsafe_allow_html=True
                 )
-                navigate_folder_id = navigate_folder[0]["id"]
-                navigate_contents = drive_ops.get_or_cache_data(
-                    key=f"folder_contents_{navigate_folder_id}",
-                    loader_func=lambda: drive_ops.list_folder_contents_recursive(navigate_folder_id),
-                    dependencies={"folder_id": important_change}
-                )
-                navigate_tree = drive_ops.build_tree(navigate_contents)
-                x, navigate_memo, y, advanced_map_memo = drive_ops.collect(navigate_folder_id, navigate_tree, important_change)
-                sorted_navigate_folders = sorted(
-                    [{"name": item["name"], "id": item["id"], "parents": item["parents"]}
-                    for item in navigate_contents
-                    if item.get("mimeType") == "application/vnd.google-apps.folder"],
-                    key=lambda x: x["name"].lower()
-                )
-                grouped_Navigate_folders = defaultdict(list)
-                for folder in sorted_navigate_folders:
-                    parent = folder.get("parents", [None])[0]
-                    mact = next((item for item in sorted_navigate_folders if item["id"] == parent), None)
-                    if mact:
-                        Name = mact["name"]
-                    else: 
-                        Name = "Navigate"
-                    grouped_Navigate_folders[Name].append(folder)
-                # Hiển thị từng nhóm theo parents
-                for parent, folders in grouped_Navigate_folders.items():
-                    with st.sidebar.expander(f"📂 {parent}", expanded=False):
-                        for folder in folders:
-                            folder_name = folder["name"]
-                            folder_id = folder["id"]
+                with st.sidebar.expander("Navigate"):
+                    navigate_folder_id = navigate_folder[0]["id"]
+                    navigate_contents = drive_ops.get_or_cache_data(
+                        key=f"folder_contents_{navigate_folder_id}",
+                        loader_func=lambda: drive_ops.list_folder_contents_recursive(navigate_folder_id),
+                        dependencies={"folder_id": important_change}
+                    )
+                    navigate_tree = drive_ops.build_tree(navigate_contents)
+                    x, navigate_memo, y, advanced_map_memo = drive_ops.collect(navigate_folder_id, navigate_tree, important_change)
+                    sorted_navigate_folders = sorted(
+                        [{"name": item["name"], "id": item["id"], "parents": item["parents"]}
+                        for item in navigate_contents
+                        if item.get("mimeType") == "application/vnd.google-apps.folder"],
+                        key=lambda x: x["name"].lower()
+                    )
+                    grouped_Navigate_folders = defaultdict(list)
+                    for folder in sorted_navigate_folders:
+                        parent = folder.get("parents", [None])[0]
+                        mact = next((item for item in sorted_navigate_folders if item["id"] == parent), None)
+                        if mact:
+                            Name = mact["name"]
+                        else: 
+                            Name = "Navigate"
+                        grouped_Navigate_folders[Name].append(folder)
+                    # Hiển thị từng nhóm theo parents
+                    for parent, folders in grouped_Navigate_folders.items():
+                        with st.expander(f"📂 {parent}", expanded=False):
+                            for folder in folders:
+                                folder_name = folder["name"]
+                                folder_id = folder["id"]
 
-                            st.markdown(
-                                f"<h3 style='color:#00bfff;'>Navigate - {folder_name}</h3>",
-                                unsafe_allow_html=True,
-                            )
-
-                            try:
-                                navigate_subfolder_content = advanced_map_memo[folder_id]
-
-                                # Lấy cả 3 phần
-                                md_files_list = [s.split('|') for s in navigate_subfolder_content]
-
-                                # Đặt key tương ứng
-                                keys = ["id", "modifiedTime", "name"]
-
-                                # Chuyển thành dict
-                                md_file = [dict(zip(keys, item)) for item in md_files_list]
-
-                            except Exception as e:
-                                st.warning(f"Lỗi khi đọc thư mục: {e}")
-                                continue
-
-                            if not md_file:
-                                st.info("Không có file .md nào trong thư mục.")
-                                continue
-                            use_random = st.checkbox(
-                                "🎲 Random chọn 1 file",
-                                value=False,
-                                key=f"use_random_{folder_id}"
-                            )
-                            if use_random:
-                                selected_file = random.choice(md_file)
-                                st.info(f"🎲 Đã chọn ngẫu nhiên: **{selected_file['name'].removesuffix('.md')}**")
-                            else:
-                                # Tìm file trùng với Include_List (ưu tiên file đầu tiên match)
-                                default_file = ""
-                                # Tạo selectbox
-                                selected_file = st.selectbox(
-                                    f"📄 Chọn file Markdown trong {folder_name}",
-                                    options=[""] + md_file,
-                                    format_func=lambda f: f["name"].removesuffix(".md") if isinstance(f, dict) else "",
-                                    index=([""] + md_file).index(default_file) if default_file else 0,
-                                    key=f"selected_md_file_{folder_id}"
+                                st.markdown(
+                                    f"<h3 style='color:#00bfff;'>Navigate - {folder_name}</h3>",
+                                    unsafe_allow_html=True,
                                 )
 
+                                try:
+                                    navigate_subfolder_content = advanced_map_memo[folder_id]
 
-                            if selected_file:
-                                file_id = selected_file["id"]
-                                navigate_file_content = drive_ops.get_or_cache_data(
-                                    key=f"Sorted_file_contents_{file_id}",
-                                    loader_func=lambda: drive_ops.get_file_content(file_id),
-                                    dependencies={"sorted_compo_id": selected_file["modifiedTime"]}
+                                    # Lấy cả 3 phần
+                                    md_files_list = [s.split('|') for s in navigate_subfolder_content]
+
+                                    # Đặt key tương ứng
+                                    keys = ["id", "modifiedTime", "name"]
+
+                                    # Chuyển thành dict
+                                    md_file = [dict(zip(keys, item)) for item in md_files_list]
+
+                                except Exception as e:
+                                    st.warning(f"Lỗi khi đọc thư mục: {e}")
+                                    continue
+
+                                if not md_file:
+                                    st.info("Không có file .md nào trong thư mục.")
+                                    continue
+                                use_random = st.checkbox(
+                                    "🎲 Random chọn 1 file",
+                                    value=False,
+                                    key=f"use_random_{folder_id}"
                                 )
-                                # --- YAML ---
-                                yaml_data = drive_ops.extract_yaml(navigate_file_content)
-                                if yaml_data:
-                                    Prompt.extend(yaml_data.get("Prompt", []))
-                                    Negative.extend(yaml_data.get("Negative", []))
+                                if use_random:
+                                    selected_file = random.choice(md_file)
+                                    st.info(f"🎲 Đã chọn ngẫu nhiên: **{selected_file['name'].removesuffix('.md')}**")
+                                else:
+                                    # Tìm file trùng với Include_List (ưu tiên file đầu tiên match)
+                                    default_file = ""
+                                    # Tạo selectbox
+                                    selected_file = st.selectbox(
+                                        f"📄 Chọn file Markdown trong {folder_name}",
+                                        options=[""] + md_file,
+                                        format_func=lambda f: f["name"].removesuffix(".md") if isinstance(f, dict) else "",
+                                        index=([""] + md_file).index(default_file) if default_file else 0,
+                                        key=f"selected_md_file_{folder_id}"
+                                    )
 
-                                call_lines = drive_ops.extract_bullet_items_from_section(navigate_file_content, "Call")
-                                for line in call_lines:
-                                    match = re.match(r'-\s*(?:(.*?):\s*)?\[\[(.*?)\]\](?:\s*\|\s*(.+))?', line)
-                                    if match:
-                                        called_important = match.group(2)
-                                        raw_prior = match.group(3)
-                                        call_list[called_important] = raw_prior
-                                if call_list:
-                                    st.code("\n".join(call_list))
+
+                                if selected_file:
+                                    file_id = selected_file["id"]
+                                    navigate_file_content = drive_ops.get_or_cache_data(
+                                        key=f"Sorted_file_contents_{file_id}",
+                                        loader_func=lambda: drive_ops.get_file_content(file_id),
+                                        dependencies={"sorted_compo_id": selected_file["modifiedTime"]}
+                                    )
+                                    # --- YAML ---
+                                    yaml_data = drive_ops.extract_yaml(navigate_file_content)
+                                    if yaml_data:
+                                        for key, value in yaml_data.items():
+                                            if key.startswith("Prompt") and isinstance(value, list):
+                                                Prompt.append(random.choice(value))
+                                        Negative.extend(yaml_data.get("Negative", []))
+
+                                    call_lines = drive_ops.extract_bullet_items_from_section(navigate_file_content, "Call")
+                                    for line in call_lines:
+                                        match = re.match(r'-\s*(?:(.*?):\s*)?\[\[(.*?)\]\](?:\s*\|\s*(.+))?', line)
+                                        if match:
+                                            called_important = match.group(2)
+                                            raw_prior = match.group(3)
+                                            call_list[called_important] = raw_prior
+                                    if call_list:
+                                        st.code("\n".join(call_list))
 
 
             if not components_folders:
@@ -375,6 +378,8 @@ def main():
                                 Prior_Level_Default = Prior_Level_Default.strip("[]")
                             Prior_Cate_List.append(("Default", category, str(Prior_Level_Default)))
                             default_entries.append((category, value, Prior_Level_Default))
+                    if default_set_lines:
+                        List_Defaulter[selected_name] = default_set_lines
 
                     # Bước 2: Hiển thị checkbox
                     with st.expander("Thành phần Built Sẵn", expanded=True):
@@ -386,8 +391,8 @@ def main():
                             else: 
                                 Taking_Navi = True
                             take_default = st.checkbox(f"Lấy {category}?", value=Taking_Navi, key=f"laplace_{file_id}_{category}_{navi_def}")
-                            if take_default:
-                                default_prompt.append(value)  # Ghép chuỗi
+                        if take_default:
+                            default_prompt.append(value)  # Ghép chuỗi
                                 
                     if default_prompt != []:
                         Prompt.extend(default_prompt)
@@ -755,6 +760,9 @@ def main():
                         <b>🔹 Note {i}:</b> {instr}
                     </div>
                     """, unsafe_allow_html=True)
+            for (lo,k) in List_Defaulter.items():
+                st.markdown(f"## {lo}")
+                st.write("\n".join(k))
             if st.button("💾 Lưu!", key="luucauhinh"):
                 code_content = "---\n---\n\n## Call:\n"
                 for i in Called:
