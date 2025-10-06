@@ -779,5 +779,3 @@ def main():
     else:
         st.info("Vui lòng nhập link thư mục Google Drive ở sidebar.")
 main()
-
-
