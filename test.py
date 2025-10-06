@@ -652,7 +652,7 @@ def main():
             Init_Prompt = st.text_input("Prompt Gốc: ", value="", key="input_init_intro")
             Lora_Prompt = st.text_input(
                 "Prompt Lora: ",
-                value="sidelighting, shade, best quality",
+                value="",
                 key="Lora_outa_outro"
             )
             st.subheader("✨ Quay Gacha Tất Cả")
