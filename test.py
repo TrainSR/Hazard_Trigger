@@ -92,6 +92,8 @@ def main():
     Prior_Level = []
     Prior_Level_Default = []
     Prior_Cate_List = []
+    Default_Prompt_Neo = []
+    Sorted_Compo_Prompt = []
     with st.sidebar.expander("Change"):
         components_change = st.checkbox("Thay đổi Components", key="components_change")
         important_change = st.checkbox("Thay đổi Important", key="important_change")
@@ -216,6 +218,7 @@ def main():
                                             if key.startswith("Prompt") and isinstance(value, list):
                                                 Prompt.append(random.choice(value))
                                         Negative.extend(yaml_data.get("Negative", []))
+                                        Default_Prompt_Neo.extend(yaml_data.get("Z_LoraPrompt", []))
 
                                     call_lines = drive_ops.extract_bullet_items_from_section(navigate_file_content, "Call")
                                     for line in call_lines:
@@ -349,7 +352,7 @@ def main():
                     if yaml_data:
                         Prompt.extend(yaml_data.get("Prompt", []))
                         Negative.extend(yaml_data.get("Negative", []))
-                        Exclude.extend(yaml_data.get("Exclude", []))
+                        Default_Prompt_Neo.extend(yaml_data.get("Z_LoraPrompt", []))
 
                         with st.expander("🧾 Thuộc tính YAML", expanded=False):
                             for key, value in yaml_data.items():
@@ -546,9 +549,10 @@ def main():
                                 if yaml_data:
                                     for key, value in yaml_data.items():
                                         if key.startswith("Prompt") and isinstance(value, list):
-                                            Prompt.append(random.choice(value))
+                                            Sorted_Compo_Prompt.append(random.choice(value))
                                     Negative.extend(yaml_data.get("Negative", []))
                                     Exclude.extend(yaml_data.get("Exclude", []))
+                                    Default_Prompt_Neo.extend(yaml_data.get("Z_DefaultPrompts", []))
                                     with st.expander(f"🧾 YAML - {selected_file['name']}", expanded=False):
                                         for key, value in yaml_data.items():
                                             st.markdown(
@@ -651,9 +655,10 @@ def main():
         # Tab Gacha Chính
         with tabs[0]:
             Init_Prompt = st.text_input("Prompt Gốc: ", value="", key="input_init_intro")
+            Default = ", ".join(Default_Prompt_Neo) if Default_Prompt_Neo else ""
             Lora_Prompt = st.text_input(
                 "Prompt Lora: ",
-                value=" ",
+                value=f"{Default}",
                 key="Lora_outa_outro"
             )
             st.subheader("✨ Quay Gacha Tất Cả")
@@ -672,13 +677,14 @@ def main():
                 if serie_prompt:
                     all_prompts.extend([item.strip().strip(",") for item in serie_prompt])
                 all_prompts.extend(cleaned)
+                all_prompts.extend(Sorted_Compo_Prompt)
                 all_prompts.append(Lora_Prompt)
                 seen = set()
                 unique_prompts = [p for p in all_prompts if not (p in seen or seen.add(p))]
                 joined = ", ".join(unique_prompts)
                 st.subheader("📋 Prompt dạng chuỗi copy được:")
                 st.code(joined, language="text")
-                st.code(", ".join(cleaned))
+                st.code(", ".join(Sorted_Compo_Prompt))
 
                 # In Negative riêng nếu có
                 try:
