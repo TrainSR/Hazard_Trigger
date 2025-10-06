@@ -58,7 +58,7 @@ def map_index_to_yaml_flat(index, yaml_data):
     return flat_list
 
 
-def gacha_form(label, folder_id, Included, index, serie_exclude, components_change, compo_memo):
+def gacha_form(label, folder_id, Included, index, components_change, compo_memo):
     folder_data = compo_memo[folder_id]
 
     
@@ -84,7 +84,6 @@ def main():
     Negative = []
     Include_List = []
     Include_Num = []
-    Exclude = []
     Called = []
     Random_List = {}
     Navigate_Exlucde = []
@@ -551,7 +550,6 @@ def main():
                                         if key.startswith("Prompt") and isinstance(value, list):
                                             Sorted_Compo_Prompt.append(random.choice(value))
                                     Negative.extend(yaml_data.get("Negative", []))
-                                    Exclude.extend(yaml_data.get("Exclude", []))
                                     Default_Prompt_Neo.extend(yaml_data.get("Z_DefaultPrompts", []))
                                     with st.expander(f"🧾 YAML - {selected_file['name']}", expanded=False):
                                         for key, value in yaml_data.items():
@@ -592,7 +590,6 @@ def main():
                                             Include_Num.append(include_number[i])
 
         all_gacha_prompts = []
-        serie_exclude = Exclude
 
         with tabs[1]:
             serie_include, include_numbering = merge_lists(Include_List, Include_Num)
@@ -631,7 +628,7 @@ def main():
                             Included = True
 
                         # Gọi gacha_form
-                        gacha_prompts = gacha_form(label, item["id"], Included, index, serie_exclude, components_change, compo_memo)
+                        gacha_prompts = gacha_form(label, item["id"], Included, index, components_change, compo_memo)
 
                         all_gacha_prompts.extend(gacha_prompts)
 
@@ -779,5 +776,3 @@ def main():
     else:
         st.info("Vui lòng nhập link thư mục Google Drive ở sidebar.")
 main()
-
-
