@@ -500,7 +500,6 @@ def main():
                             if not md_files:
                                 st.info("Không có file .md nào trong thư mục.")
                                 continue
-                            folder_prompts = set()
 
                             use_random = st.checkbox(
                                 "🎲 Random chọn 1 file",
@@ -545,7 +544,9 @@ def main():
                                 yaml_data = drive_ops.extract_yaml(sorted_file_content)
 
                                 if yaml_data:
-                                    Prompt.extend(yaml_data.get("Prompt", []))
+                                    for key, value in yaml_data.items():
+                                        if key.startswith("Prompt") and isinstance(value, list):
+                                            Prompt.append(random.choice(value))
                                     Negative.extend(yaml_data.get("Negative", []))
                                     Exclude.extend(yaml_data.get("Exclude", []))
                                     with st.expander(f"🧾 YAML - {selected_file['name']}", expanded=False):
@@ -652,7 +653,7 @@ def main():
             Init_Prompt = st.text_input("Prompt Gốc: ", value="", key="input_init_intro")
             Lora_Prompt = st.text_input(
                 "Prompt Lora: ",
-                value="",
+                value=" ",
                 key="Lora_outa_outro"
             )
             st.subheader("✨ Quay Gacha Tất Cả")
