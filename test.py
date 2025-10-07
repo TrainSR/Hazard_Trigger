@@ -524,13 +524,17 @@ def main():
                                 st.write(default_files)
 
                                 # Tạo multiselect
+                                default_names = [f["name"] for f in default_files]
                                 selected_files = st.multiselect(
                                     f"📄 Chọn file Markdown trong {folder_name}",
-                                    options=md_files,
-                                    format_func=lambda f: f["name"].removesuffix(".md"),
-                                    default=default_files,
+                                    options=[f["name"] for f in md_files],
+                                    default=default_names,
                                     key=f"selected_md_files_{folder_id}"
                                 )
+                                # Sau đó map ngược lại:
+                                selected_files = [f for f in md_files if f["name"] in selected_files]
+
+
 
                             if selected_files:
                                 for selected_file in selected_files:
