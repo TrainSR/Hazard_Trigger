@@ -521,8 +521,6 @@ def main():
                                         default_files.append(f)
                                         if base_name in tuple(call_list.keys()):
                                             del call_list[base_name]
-                                st.write(default_files)
-                                st.write(md_files)
 
                                 # Tạo multiselect
                                 selected_files = st.multiselect(
@@ -686,8 +684,6 @@ def main():
                 st.subheader("📋 Prompt dạng chuỗi copy được:")
                 st.code(joined, language="text")
                 st.code(", ".join([p for p in Sorted_Compo_Prompt if p]))
-                st.write(Default_Prompt_Neo)
-                st.write(call_list)
 
                 # In Negative riêng nếu có
                 try:
