@@ -521,6 +521,7 @@ def main():
                                         default_files.append(f)
                                         if base_name in tuple(call_list.keys()):
                                             del call_list[base_name]
+                                st.write(default_files)
 
                                 # Tạo multiselect
                                 selected_files = st.multiselect(
@@ -732,25 +733,6 @@ def main():
                 st.table(dfr)
                     
         with tabs[4]:
-            nums = list(map(float, st.text_input("Các lần: ").split()))
-            result = 1.0
-            for i, n in enumerate(nums, start=1):
-                result *= (1 - n/10)
-                Tk = 1 - result
-            if nums: 
-                success = random.random() <= Tk
-                st.markdown(
-                    f"""
-                    <div style="font-size:20px; font-weight:bold;">
-                        Rate = <span style="color:skyblue;">{Tk * 100:.2f}%</span> 
-                        --> <span style="color:{'limegreen' if success else 'crimson'};">
-                            {'✅ Success!' if success else '❌ Pfft- Lucky Next Time'}
-                        </span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
             if Instructions_List:
                 st.markdown("## 📋 Hướng dẫn:")
 
@@ -767,14 +749,6 @@ def main():
                         <b>🔹 Note {i}:</b> {instr}
                     </div>
                     """, unsafe_allow_html=True)
-            for (lo,k) in List_Defaulter.items():
-                st.markdown(f"## {lo}")
-                st.write("\n".join(k))
-            if st.button("💾 Lưu!", key="luucauhinh"):
-                code_content = "---\n---\n\n## Call:\n"
-                for i in Called:
-                    code_content += f"- [[{i}]]\n"
-                st.code(code_content)
 
     else:
         st.info("Vui lòng nhập link thư mục Google Drive ở sidebar.")
