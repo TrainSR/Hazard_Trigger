@@ -522,6 +522,7 @@ def main():
                                         if base_name in tuple(call_list.keys()):
                                             del call_list[base_name]
                                 st.write(default_files)
+                                st.write(md_files)
 
                                 # Tạo multiselect
                                 md_names = [f["name"] for f in md_files]
