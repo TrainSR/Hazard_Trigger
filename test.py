@@ -514,80 +514,80 @@ def main():
                                 Random_List[folder_name] = "Sorted Component"
                             else:
                                 # Tìm file trùng với Include_List (ưu tiên file đầu tiên match)
-                                default_file = ""
+                                default_files = []
                                 for f in md_files:
                                     base_name = f["name"].removesuffix(".md")
                                     if (base_name in Include_List) or (base_name in tuple(call_list.keys())):
-                                        default_file = f
-                                        if base_name in tuple(call_list.keys()): 
+                                        default_files.append(f)
+                                        if base_name in tuple(call_list.keys()):
                                             del call_list[base_name]
-                                        break
-                                # Tạo selectbox
-                                selected_file = st.selectbox(
+
+                                # Tạo multiselect
+                                selected_files = st.multiselect(
                                     f"📄 Chọn file Markdown trong {folder_name}",
-                                    options=[""] + md_files,
-                                    format_func=lambda f: f["name"].removesuffix(".md") if isinstance(f, dict) else "",
-                                    index=([""] + md_files).index(default_file) if default_file else 0,
-                                    key=f"selected_md_file_{folder_id}"
+                                    options=md_files,
+                                    format_func=lambda f: f["name"].removesuffix(".md"),
+                                    default=default_files,
+                                    key=f"selected_md_files_{folder_id}"
                                 )
 
+                            if selected_files:
+                                for selected_file in selected_files:
+                                    file_id = selected_file["id"]
+                                    sorted_file_content = drive_ops.get_or_cache_data(
+                                        key=f"Sorted_file_contents_{file_id}",
+                                        loader_func=lambda: drive_ops.get_file_content(file_id),
+                                        dependencies={"sorted_compo_id": selected_file["modifiedTime"]}
+                                    )
 
-                            if selected_file:
-                                file_id = selected_file["id"]
-                                sorted_file_content = drive_ops.get_or_cache_data(
-                                    key=f"Sorted_file_contents_{file_id}",
-                                    loader_func=lambda: drive_ops.get_file_content(file_id),
-                                    dependencies={"sorted_compo_id": selected_file["modifiedTime"]}
-                                )
 
+                                    Included_Sorted.add(folder_name)
+                                    # --- YAML ---
+                                    yaml_data = drive_ops.extract_yaml(sorted_file_content)
 
-                                Included_Sorted.add(folder_name)
-                                # --- YAML ---
-                                yaml_data = drive_ops.extract_yaml(sorted_file_content)
-
-                                if yaml_data:
-                                    for key, value in yaml_data.items():
-                                        if key.startswith("Prompt") and isinstance(value, list):
-                                            Sorted_Compo_Prompt.append(random.choice(value))
-                                    Negative.extend(yaml_data.get("Negative", []))
-                                    Default_Prompt_Neo.extend(yaml_data.get("Z_DefaultPrompts", []))
-                                    with st.expander(f"🧾 YAML - {selected_file['name']}", expanded=False):
+                                    if yaml_data:
                                         for key, value in yaml_data.items():
-                                            st.markdown(
-                                                f"<h4 style='color:#DAA520;'>🔹 <b>{key}</b></h4>",
-                                                unsafe_allow_html=True,
-                                            )
-                                            if isinstance(value, list):
-                                                for item in value:
-                                                    st.markdown(f"- {item}")
-                                            else:
-                                                st.markdown(f"- {value}")
+                                            if key.startswith("Prompt") and isinstance(value, list):
+                                                Sorted_Compo_Prompt.append(random.choice(value))
+                                        Negative.extend(yaml_data.get("Negative", []))
+                                        Default_Prompt_Neo.extend(yaml_data.get("Z_DefaultPrompts", []))
+                                        with st.expander(f"🧾 YAML - {selected_file['name']}", expanded=False):
+                                            for key, value in yaml_data.items():
+                                                st.markdown(
+                                                    f"<h4 style='color:#DAA520;'>🔹 <b>{key}</b></h4>",
+                                                    unsafe_allow_html=True,
+                                                )
+                                                if isinstance(value, list):
+                                                    for item in value:
+                                                        st.markdown(f"- {item}")
+                                                else:
+                                                    st.markdown(f"- {value}")
 
-                                # --- Include ---
-                                include_lines = drive_ops.extract_bullet_items_from_section(sorted_file_content, "Include")
+                                    # --- Include ---
+                                    include_lines = drive_ops.extract_bullet_items_from_section(sorted_file_content, "Include")
 
-                                include_list = []
-                                include_number = []
+                                    include_list = []
+                                    include_number = []
 
-                                for line in include_lines:
-                                    match = re.match(r'-\s*(?:(.*?):\s*)?\[\[(.*?)\]\]\s*\|\s*(.*)', line)
-                                    if match:
-                                        category_name = match.group(1)
-                                        component_name = match.group(2)
-                                        quantity = match.group(3)
+                                    for line in include_lines:
+                                        match = re.match(r'-\s*(?:(.*?):\s*)?\[\[(.*?)\]\]\s*\|\s*(.*)', line)
+                                        if match:
+                                            category_name = match.group(1)
+                                            component_name = match.group(2)
+                                            quantity = match.group(3)
 
-                                        include_list.append(component_name)
-                                        include_number.append(quantity)
+                                            include_list.append(component_name)
+                                            include_number.append(quantity)
 
-                                if include_list:
-                                    with st.expander(f"📦 Include - {selected_file['name']}", expanded=False):
-                                        for i in range(len(include_list)):
-                                            st.markdown(
-                                                f"- <span style='color:#0073ff'><b>{include_list[i]}</b></span>: {include_number[i]}",
-                                                unsafe_allow_html=True
-                                            )
-                                            Include_List.append(include_list[i])
-                                            Include_Num.append(include_number[i])
+                                    if include_list:
+                                        with st.expander(f"📦 Include - {selected_file['name']}", expanded=False):
+                                            for i in range(len(include_list)):
+                                                st.markdown(
+                                                    f"- <span style='color:#0073ff'><b>{include_list[i]}</b></span>: {include_number[i]}",
+                                                    unsafe_allow_html=True
+                                                )
+                                                Include_List.append(include_list[i])
+                                                Include_Num.append(include_number[i])
 
         all_gacha_prompts = []
 
