@@ -532,7 +532,7 @@ def main():
                                     f"📄 Chọn file Markdown trong {folder_name}",
                                     options=md_names,
                                     default=default_names,
-                                    key=f"selected_md_files_{folder_id}"
+                                    key=f"selected_md_files_sorted_abcxyz_{folder_id}"
                                 )
 
                                 # Sau đó map ngược lại nếu cần object gốc:
