@@ -218,7 +218,6 @@ def main():
                                                 Prompt.append(random.choice(value))
                                         Negative.extend(yaml_data.get("Negative", []))
                                         Default_Prompt_Neo.extend(yaml_data.get("Z_LoraPrompt", []))
-                                        st.write(Default_Prompt_Neo)
 
                                     call_lines = drive_ops.extract_bullet_items_from_section(navigate_file_content, "Call")
                                     for line in call_lines:
@@ -353,7 +352,6 @@ def main():
                         Prompt.extend(yaml_data.get("Prompt", []))
                         Negative.extend(yaml_data.get("Negative", []))
                         Default_Prompt_Neo.extend(yaml_data.get("Z_LoraPrompt", []))
-                        st.write(Default_Prompt_Neo)
 
                         with st.expander("🧾 Thuộc tính YAML", expanded=False):
                             for key, value in yaml_data.items():
@@ -553,7 +551,6 @@ def main():
                                                 Sorted_Compo_Prompt.append(random.choice(value))
                                         Negative.extend(yaml_data.get("Negative", []))
                                         Default_Prompt_Neo.extend(yaml_data.get("Z_DefaultPrompts", []))
-                                        st.write(Default_Prompt_Neo)
                                         with st.expander(f"🧾 YAML - {selected_file['name']}", expanded=False):
                                             for key, value in yaml_data.items():
                                                 st.markdown(
@@ -682,13 +679,12 @@ def main():
                 seen = set()
                 cleaned_all_prompts = [p for p in all_prompts if p]
                 unique_prompts = [p for p in cleaned_all_prompts if not (p in seen or seen.add(p))]
-                with st.expander("BC"):
-                    st.write(cleaned_all_prompts)
-                    st.write(unique_prompts)
                 joined = ", ".join(unique_prompts)
                 st.subheader("📋 Prompt dạng chuỗi copy được:")
                 st.code(joined, language="text")
                 st.code(", ".join([p for p in Sorted_Compo_Prompt if p]))
+                st.write(Default_Prompt_Neo)
+                st.write(call_list)
 
                 # In Negative riêng nếu có
                 try:
