@@ -655,10 +655,11 @@ def main():
             Init_Prompt = st.text_input("Prompt Gốc: ", value="", key="input_init_intro")
             Default = ", ".join(Default_Prompt_Neo) if Default_Prompt_Neo else ""
             Lora_Prompt = st.text_input(
-                "Prompt Lora: ",
-                value=f"{Default}",
-                key="Lora_outa_outro"
+                "Prompt Lora:",
+                key=f"Lora_outa_outro_{hash(Default)}",
+                value=Default
             )
+
             st.subheader("✨ Quay Gacha Tất Cả")
 
             if st.button("🎲 Quay!", key="quay_gacha"):
