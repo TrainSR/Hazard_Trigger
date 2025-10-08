@@ -77,7 +77,6 @@ def gacha_form(label, folder_id, Included, index, components_change, compo_memo)
 
 def main():
     Included_Sorted = set()
-    List_Defaulter = {}
     Instructions_List = []
     call_list = {}
     Prompt = []
@@ -380,21 +379,13 @@ def main():
                                 Prior_Level_Default = Prior_Level_Default.strip("[]")
                             Prior_Cate_List.append(("Default", category, str(Prior_Level_Default)))
                             default_entries.append((category, value, Prior_Level_Default))
-                    if default_set_lines:
-                        List_Defaulter[selected_name] = default_set_lines
 
                     # Bước 2: Hiển thị checkbox
                     with st.expander("Thành phần Built Sẵn", expanded=True):
                         for category, value, navi_def in default_entries:
-                            if Navigate_Exclusive:
-                                Taking_Navi = navi_def in Navigate_Exclusive
-                            elif Navigate_Exlucde: 
-                                Taking_Navi = navi_def not in Navigate_Exlucde
-                            else: 
-                                Taking_Navi = True
-                            take_default = st.checkbox(f"Lấy {category}?", value=Taking_Navi, key=f"laplace_{file_id}_{category}_{navi_def}")
-                        if take_default:
-                            default_prompt.append(value)  # Ghép chuỗi
+                            take_default = st.checkbox(f"Lấy {category}?", value=True, key=f"laplace_{file_id}_{category}_{navi_def}")
+                            if take_default:
+                                default_prompt.append(value)  # Ghép chuỗi
                                 
                     if default_prompt != []:
                         Prompt.extend(default_prompt)
