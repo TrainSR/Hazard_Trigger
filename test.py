@@ -500,8 +500,10 @@ def main():
                                 key=f"use_random_{folder_id}"
                             )
                             if use_random:
-                                selected_file = random.choice(md_files)
-                                st.info(f"🎲 Đã chọn ngẫu nhiên: **{selected_file['name'].removesuffix('.md')}**")
+                                selected_files = random.sample(md_files, 1)
+                                st.info("🎲 Đã chọn ngẫu nhiên: " + 
+                                        ", ".join(f"**{f['name'].removesuffix('.md')}**" for f in selected_files))
+
                                 Random_List[folder_name] = "Sorted Component"
                             else:
                                 # Tìm file trùng với Include_List (ưu tiên file đầu tiên match)
