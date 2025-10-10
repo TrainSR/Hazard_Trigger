@@ -184,7 +184,7 @@ def main():
                                 use_random = st.checkbox(
                                     "🎲 Random chọn 1 file",
                                     value=False,
-                                    key=f"use_random_{folder_id}"
+                                    key=f"use_random_sdjd{folder_id}"
                                 )
                                 if use_random:
                                     selected_file = random.choice(md_file)
@@ -497,7 +497,7 @@ def main():
                             use_random = st.checkbox(
                                 "🎲 Random chọn 1 file",
                                 value=Burst_Mode,
-                                key=f"use_random_{folder_id}"
+                                key=f"use_random_sorted_{folder_id}"
                             )
                             if use_random:
                                 selected_files = random.sample(md_files, 1)
