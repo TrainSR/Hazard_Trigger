@@ -15,7 +15,7 @@ st.title("📁 Google Drive Folder Tool")
 
 All_TAGS = []
 
-tab1, tab2 = st.tabs(["📂 Chọn thư mục hoặc file", " "])
+tab1, tab2 = st.tabs(["📂 Chọn thư mục hoặc file", "Tạo Shortcut cho toàn bộ File"])
 
 # --- Extract ID ---
 def extract_id_from_url(url):
@@ -127,3 +127,54 @@ with tab1:
             st.error("❌ Không thể trích xuất ID từ link.")
     else:
         st.info("🔎 Vui lòng nhập link file hoặc folder Drive.")
+
+# --- TAB 2 ---
+    with tab2:
+        st.subheader("📎 Tạo Shortcut cho toàn bộ File")
+
+        parent_folder_url = st.text_input("🔗 Nhập link folder gốc:")
+        new_folder_name = st.text_input("📁 Tên subfolder mới:", value="Shortcuts")
+
+        if st.button("🚀 Tạo subfolder & Shortcut"):
+            parent_id = extract_id_from_url(parent_folder_url)
+            if not parent_id:
+                st.error("❌ Không thể trích xuất ID từ link folder.")
+            else:
+                try:
+                    # 1. Tạo subfolder bên trong folder gốc
+                    subfolder_metadata = {
+                        'name': new_folder_name,
+                        'mimeType': 'application/vnd.google-apps.folder',
+                        'parents': [parent_id]
+                    }
+                    new_subfolder = drive_service.files().create(
+                        body=subfolder_metadata,
+                        fields='id, name'
+                    ).execute()
+                    new_subfolder_id = new_subfolder['id']
+                    st.success(f"✅ Đã tạo subfolder: `{new_subfolder['name']}`")
+
+                    # 2. Lấy danh sách file trong folder gốc (không đệ quy)
+                    files = drive_ops.list_folder_contents(parent_id)
+                    file_count = 0
+
+                    # 3. Tạo shortcut
+                    for item in files:
+                        # Bỏ qua thư mục
+                        if item.get("mimeType") == "application/vnd.google-apps.folder":
+                            continue
+                        shortcut_metadata = {
+                            'name': item['name'],
+                            'mimeType': 'application/vnd.google-apps.shortcut',
+                            'parents': [new_subfolder_id],
+                            'shortcutDetails': {
+                                'targetId': item['id']
+                            }
+                        }
+                        drive_service.files().create(body=shortcut_metadata).execute()
+                        file_count += 1
+
+                    st.success(f"✅ Đã tạo {file_count} shortcut trong subfolder `{new_folder_name}`.")
+
+                except Exception as e:
+                    st.error(f"❌ Lỗi: {e}")
