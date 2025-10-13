@@ -503,7 +503,10 @@ def main():
                                 key=f"use_random_sord_SSOIFfaoifuaoaf{folder_id}"
                             )
                             if use_random:
-                                so_luong = int(call_list[folder_name].strip()) if call_list[folder_name] else 1
+                                if folder_name in tuple(call_list.keys()):
+                                    so_luong = int(call_list[folder_name])
+                                else:
+                                    so_luong = 1
                                 so_luong_ngau_nhien = st.number_input(
                                     "Số lượng ngẫu nhiên",
                                     min_value=1,
@@ -679,7 +682,7 @@ def main():
                 if Init_Prompt != "":
                     all_prompts.append(Init_Prompt)
                 if serie_prompt:
-                    all_prompts.extend([item.strip().strip(",") for item in serie_prompt])
+                    all_prompts.extend([item.strip().strip(",") for item in serie_prompt if item])
                 all_prompts.extend(cleaned)
                 all_prompts.extend(Sorted_Compo_Prompt)
                 all_prompts.append(Lora_Prompt)
