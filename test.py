@@ -92,6 +92,7 @@ def main():
     Prior_Cate_List = []
     Default_Prompt_Neo = []
     Sorted_Compo_Prompt = []
+    Line_True = False
     with st.sidebar.expander("Change"):
         components_change = st.checkbox("Thay đổi Components", key="components_change")
         important_change = st.checkbox("Thay đổi Important", key="important_change")
@@ -469,6 +470,8 @@ def main():
                             folder_name = folder["name"]
                             folder_id = folder["id"]
                             Burst_Mode = (folder_name in Include_List) or (folder_name in tuple(call_list.keys()))
+                            if Burst_Mode:
+                                Line_True = True
                             st.markdown(
                                 f"<h3 style='color:#00bfff;'>📦 Sorted - {folder_name}</h3>",
                                 unsafe_allow_html=True,
@@ -497,10 +500,18 @@ def main():
                             use_random = st.checkbox(
                                 "🎲 Random chọn 1 file",
                                 value=Burst_Mode,
-                                key=f"use_random_sorted_{folder_id}"
+                                key=f"use_random_sord_SSOIFfaoifuaoaf{folder_id}"
                             )
                             if use_random:
-                                selected_files = random.sample(md_files, 1)
+                                so_luong = int(call_list[folder_name].strip()) if call_list[folder_name] else 1
+                                so_luong_ngau_nhien = st.number_input(
+                                    "Số lượng ngẫu nhiên",
+                                    min_value=1,
+                                    value=so_luong,
+                                    step=1,
+                                    key = f"soLuowngngaungieen{folder_name}"
+                                )
+                                selected_files = random.sample(md_files, so_luong_ngau_nhien)
                                 st.info("🎲 Đã chọn ngẫu nhiên: " + 
                                         ", ".join(f"**{f['name'].removesuffix('.md')}**" for f in selected_files))
 
@@ -581,7 +592,9 @@ def main():
                                                 )
                                                 Include_List.append(include_list[i])
                                                 Include_Num.append(include_number[i])
-
+                    if Line_True:
+                        st.markdown("---")
+                        Line_True = False
         all_gacha_prompts = []
 
         with tabs[1]:
