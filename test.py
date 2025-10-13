@@ -501,8 +501,8 @@ def main():
                                 st.session_state[key_name] = Burst_Mode
                             use_random = st.checkbox(
                                 "🎲 Random chọn 1 file",
-                                value=key_name,
-                                key=f"use_random_sord_SSOIFfaoifuaoaf{folder_id}"
+                                value=st.session_state[key_name],
+                                key=key_name
                             )
 
                             if use_random:
