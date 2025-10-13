@@ -502,6 +502,9 @@ def main():
                                 value=Burst_Mode,
                                 key=f"use_random_sord_SSOIFfaoifuaoaf{folder_id}"
                             )
+                            st.write("Session state value:", st.session_state[f"use_random_sord_SSOIFfaoifuaoaf{folder_id}"])
+                            st.write("Burst_Mode value:", Burst_Mode)
+
                             if use_random:
                                 if folder_name in tuple(call_list.keys()):
                                     so_luong = int(call_list[folder_name])
