@@ -497,9 +497,8 @@ def main():
                                 st.info("Không có file .md nào trong thư mục.")
                                 continue
                             key_name = f"use_random_sord_SSOIFfaoifuaoaf{folder_id}"
-                            if key_name in st.session_state:
-                                if not st.session_state[key_name]:
-                                    del st.session_state[key_name]
+                            if st.session_state.get(key_name, False) = Burst_Mode:
+                                del st.session_state[key_name]
 
                             use_random = st.checkbox("🎲 Random chọn 1 file", value=Burst_Mode, key=key_name)
 
