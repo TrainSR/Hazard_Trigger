@@ -501,7 +501,7 @@ def main():
                                 del st.session_state[key_name]
 
                             use_random = st.checkbox("🎲 Random chọn 1 file", value=Burst_Mode, key=key_name)
-
+                            st.code(use_random)
                             if use_random:
                                 if folder_name in tuple(call_list.keys()):
                                     so_luong = int(call_list[folder_name])
