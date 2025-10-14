@@ -516,7 +516,7 @@ def main():
 
                             if use_random:
                                 if folder_name in tuple(call_list.keys()):
-                                    so_luong = int(call_list[folder_name])
+                                    so_luong = int(call_list[folder_name]) if call_list[folder_name] else 1
                                 else:
                                     so_luong = 1
                                 so_luong_ngau_nhien = st.number_input(
