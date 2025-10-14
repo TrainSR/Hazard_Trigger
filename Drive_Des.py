@@ -155,14 +155,17 @@ with tab1:
                     st.success(f"✅ Đã tạo subfolder: `{new_subfolder['name']}`")
 
                     # 2. Lấy danh sách file trong folder gốc (không đệ quy)
-                    files = drive_ops.list_folder_contents(parent_id)
+                    files = drive_ops.list_folder_contents_recursive(parent_id)
                     file_count = 0
 
                     # 3. Tạo shortcut
                     for item in files:
-                        # Bỏ qua thư mục
-                        if item.get("mimeType") == "application/vnd.google-apps.folder":
+                        if item.get("mimeType") in [
+                            "application/vnd.google-apps.folder",
+                            "application/vnd.google-apps.shortcut"
+                        ]:
                             continue
+
                         shortcut_metadata = {
                             'name': item['name'],
                             'mimeType': 'application/vnd.google-apps.shortcut',
