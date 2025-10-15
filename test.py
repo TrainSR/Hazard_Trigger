@@ -58,23 +58,6 @@ def map_index_to_yaml_flat(index, yaml_data):
     return flat_list
 
 
-def gacha_form(label, folder_id, Included, index, components_change, compo_memo):
-    folder_data = compo_memo[folder_id]
-
-    
-    with st.expander(f"🔎 {label}", expanded=Included):
-        prompts = []
-        # Chọn chế độ
-        mode_key = f"{label}{folder_id}_mode"
-        gacha_mode = st.checkbox(f"Gacha ngẫu nhiên ({label})", value=Included, key=mode_key)
-        if gacha_mode:
-            yaml_data = drive_ops.extract_yamls(folder_data)
-            if not yaml_data:
-                return [], []
-            prompts = map_index_to_yaml_flat(index, yaml_data)
-
-    return prompts
-
 def main():
     Included_Sorted = set()
     Instructions_List = []
@@ -94,7 +77,6 @@ def main():
     Sorted_Compo_Prompt = []
     Line_True = False
     with st.sidebar.expander("Change"):
-        components_change = st.checkbox("Thay đổi Components", key="components_change")
         important_change = st.checkbox("Thay đổi Important", key="important_change")
         sorted_change = st.checkbox("Thay đổi Sorted", key="sorted_change")
     st.title("Hazard Trigger")
@@ -116,11 +98,7 @@ def main():
                 if item.get("mimeType") == "application/vnd.google-apps.folder"
                 and item.get("name") == "2. Important"
             ]
-            components_folders = [
-                item for item in contents
-                if item.get("mimeType") == "application/vnd.google-apps.folder"
-                and item.get("name") == "4. Components"
-            ]
+
 
             if navigate_folder:
                 st.sidebar.markdown(
@@ -221,30 +199,16 @@ def main():
 
                                     call_lines = drive_ops.extract_bullet_items_from_section(navigate_file_content, "Call")
                                     for line in call_lines:
-                                        match = re.match(r'-\s*(?:(.*?):\s*)?\[\[(.*?)\]\](?:\s*\|\s*(.+))?', line)
+                                        match = re.match(r'-\s*(.*?)\s*(?:\|\s*(.*))?$', line)
                                         if match:
-                                            called_important = match.group(2)
-                                            raw_prior = match.group(3)
+                                            taken = match.group(1)
+                                            result = re.findall(r'\[\[(.*?)\]\]', taken)
+                                            called_important = random.choice(result)
+                                            raw_prior = match.group(2)
                                             call_list[called_important] = raw_prior
                                     if call_list:
                                         st.code("\n".join(call_list))
 
-
-            if not components_folders:
-                st.error("❌ Không tìm thấy thư mục 'Components'.")
-            else:
-                components_folder_id = components_folders[0]["id"]
-
-                # Bước 2: Liệt kê các content trong thư mục Components
-                component_contents = drive_ops.get_or_cache_data(
-                    key="components_folder_contents",
-                    loader_func=lambda: drive_ops.list_folder_contents_recursive(components_folder_id),
-                    dependencies={"components_folder_change": components_change}
-                )
-                component_subfolders = [
-                    item for item in component_contents
-                    if item.get("mimeType") == "application/vnd.google-apps.folder"
-                ]
 
         else:
             st.warning("📭 Thư mục rỗng hoặc không đọc được nội dung.")
@@ -422,7 +386,7 @@ def main():
                     Navigate_Exclusive = []
                     Prior_Level = []
                     Prior_Level_Default = []
-        tab_labels = ["🎮 Gacha Chính", "Components", "Sorted_Components", "Prompt Sorting", "Chance"]
+        tab_labels = ["🎮 Gacha Chính", "Instruct", "Sorted_Components", "Prompt Sorting"]
         tabs = st.tabs(tab_labels)
 
 
@@ -467,6 +431,7 @@ def main():
                 for parent, folders in grouped_folders.items():
                     with st.expander(f"📂 {parent}", expanded=False):
                         for folder in folders:
+                            selected_number = []
                             folder_name = folder["name"]
                             folder_id = folder["id"]
                             Burst_Mode = (folder_name in Include_List) or (folder_name in tuple(call_list.keys()))
@@ -519,14 +484,8 @@ def main():
                                     so_luong = int(call_list[folder_name]) if call_list[folder_name] else 1
                                 else:
                                     so_luong = 1
-                                so_luong_ngau_nhien = st.number_input(
-                                    "Số lượng ngẫu nhiên",
-                                    min_value=1,
-                                    value=so_luong,
-                                    step=1,
-                                    key = f"soLuowngngaungieen{folder_name}"
-                                )
-                                selected_files = random.sample(md_files, so_luong_ngau_nhien)
+                                selected_files = random.sample(md_files, 1)
+                                selected_number.append(so_luong)
                                 st.info("🎲 Đã chọn ngẫu nhiên: " + 
                                         ", ".join(f"**{f['name'].removesuffix('.md')}**" for f in selected_files))
 
@@ -539,6 +498,8 @@ def main():
                                     if (base_name in Include_List) or (base_name in tuple(call_list.keys())):
                                         default_files.append(f)
                                         if base_name in tuple(call_list.keys()):
+                                            so_luong = int(call_list[basename]) if call_list[basename] else 1
+                                            selected_number.append(so_luong)
                                             del call_list[base_name]
 
                                 # Tạo multiselect
@@ -551,15 +512,26 @@ def main():
                                 )
 
                             if selected_files:
-                                for selected_file in selected_files:
+                                for i in range(len(selected_files)):
+                                    selected_file = selected_files[i]
                                     file_id = selected_file["id"]
                                     sorted_file_content = drive_ops.get_or_cache_data(
                                         key=f"Sorted_file_contents_{file_id}",
                                         loader_func=lambda: drive_ops.get_file_content(file_id),
                                         dependencies={"sorted_compo_id": selected_file["modifiedTime"]}
                                     )
-
-
+                                    try:
+                                        number = selected_number[i]
+                                    except:
+                                        number = 1
+                                    boxbox = st.number_input(
+                                        label="Số lượng gacha.",
+                                        min_value=0,
+                                        max_value=10,
+                                        value=number,
+                                        step=1,
+                                        key=f"{folder_id}{file_id}boxbox"  # Khóa định danh duy nhất
+                                    )
                                     Included_Sorted.add(folder_name)
                                     # --- YAML ---
                                     yaml_data = drive_ops.extract_yaml(sorted_file_content)
@@ -567,7 +539,7 @@ def main():
                                     if yaml_data:
                                         for key, value in yaml_data.items():
                                             if key.startswith("Prompt") and isinstance(value, list):
-                                                Sorted_Compo_Prompt.append(random.choice(value))
+                                                Sorted_Compo_Prompt.extend(random.sample(value, boxbox))
                                         Negative.extend(yaml_data.get("Negative", []))
                                         Default_Prompt_Neo.extend(yaml_data.get("Z_DefaultPrompts", []))
                                         with st.expander(f"🧾 YAML - {selected_file['name']}", expanded=False):
@@ -610,49 +582,6 @@ def main():
                     if Line_True:
                         st.markdown("---")
                         Line_True = False
-        all_gacha_prompts = []
-
-        with tabs[1]:
-            serie_include, include_numbering = merge_lists(Include_List, Include_Num)
-            tree_compo = drive_ops.build_tree(component_contents)
-            x, compo_memo, y, compo_map_advanced = drive_ops.collect(components_folder_id, tree_compo, components_change)
-            grouped = {}
-            for item in component_subfolders:
-                parent = item.get("parents", [None])[0]  # fallback nếu không có parents
-                mact_compo = next((item for item in component_subfolders if item["id"] == parent), None)
-                if mact_compo:
-                    Name_compo = mact_compo["name"]
-                else: 
-                    Name_compo = "1. Components"
-                grouped.setdefault(Name_compo, []).append(item)
-
-            for parent, items in sorted(grouped.items()):
-                with st.expander(f"📂 {parent}", expanded=False):
-                    for item in items:
-                        Included = False
-                        index = ({None: 1},)
-                        label = item["name"]
-                        if label in serie_include:
-                            idx = serie_include.index(label)
-                            raws = include_numbering.pop(idx)
-                            serie_include.pop(idx)
-
-                            # Tách theo dấu phẩy
-                            parts = [part.strip() for part in raws.split(",")]
-
-                            # Tạo tuple chứa nhiều dict
-                            index = tuple(
-                                ({key.strip(): int(val.strip())} if ":" in raw else {None: int(raw.strip())})
-                                for raw in parts
-                                for key, val in ([raw.split(":")] if ":" in raw else [(None, raw)])
-                            )
-                            Included = True
-
-                        # Gọi gacha_form
-                        gacha_prompts = gacha_form(label, item["id"], Included, index, components_change, compo_memo)
-
-                        all_gacha_prompts.extend(gacha_prompts)
-
 
         with tabs[3]:
             user_prompt = st.text_input("Prompt: ", value="", key="classsing_prompting")
@@ -687,7 +616,6 @@ def main():
                 # Xử lý prompt và negative
                 serie_prompt = Prompt
                 serie_negative = Negative
-                cleaned = [item.strip().strip(",") for item in all_gacha_prompts]
 
                 # Ghép prompt của series (nếu có) và Default_Prompt
                 all_prompts = []
@@ -695,7 +623,6 @@ def main():
                     all_prompts.append(Init_Prompt)
                 if serie_prompt:
                     all_prompts.extend([item.strip().strip(",") for item in serie_prompt if item])
-                all_prompts.extend(cleaned)
                 all_prompts.extend(Sorted_Compo_Prompt)
                 all_prompts.append(Lora_Prompt)
                 seen = set()
@@ -713,16 +640,8 @@ def main():
                     st.code(cleaned_neg, language="text")
                 except:
                     pass
-        filtered = [
-            (s, n) for s, n in zip(serie_include, include_numbering)
-            if s not in Included_Sorted and n != "0"
-        ]
-
-        if filtered:
-            sorted_filtered = sorted(filtered, key=lambda x: x[0])
-            serie_include, include_numbering = map(list, zip(*sorted_filtered))
-        else:
-            serie_include, include_numbering = [], []
+        serie_include = []
+        include_numbering = []
         serie_include.extend(list(call_list.keys()))
         include_numbering.extend(list(call_list.keys()))
 
@@ -751,7 +670,7 @@ def main():
                 )
                 st.table(dfr)
                     
-        with tabs[4]:
+        with tabs[1]:
             if Instructions_List:
                 st.markdown("## 📋 Hướng dẫn:")
 
