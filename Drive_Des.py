@@ -133,7 +133,6 @@ with tab1:
         st.subheader("📎 Tạo Shortcut cho toàn bộ File")
 
         parent_folder_url = st.text_input("🔗 Nhập link folder gốc:")
-        new_folder_name = st.text_input("📁 Tên subfolder mới:", value="Shortcuts")
 
         if st.button("🚀 Tạo subfolder & Shortcut"):
             parent_id = extract_id_from_url(parent_folder_url)
@@ -141,19 +140,6 @@ with tab1:
                 st.error("❌ Không thể trích xuất ID từ link folder.")
             else:
                 try:
-                    # 1. Tạo subfolder bên trong folder gốc
-                    subfolder_metadata = {
-                        'name': new_folder_name,
-                        'mimeType': 'application/vnd.google-apps.folder',
-                        'parents': [parent_id]
-                    }
-                    new_subfolder = drive_service.files().create(
-                        body=subfolder_metadata,
-                        fields='id, name'
-                    ).execute()
-                    new_subfolder_id = new_subfolder['id']
-                    st.success(f"✅ Đã tạo subfolder: `{new_subfolder['name']}`")
-
                     # 2. Lấy danh sách file trong folder gốc (không đệ quy)
                     files = drive_ops.list_folder_contents_recursive(parent_id)
                     file_count = 0
@@ -169,7 +155,7 @@ with tab1:
                         shortcut_metadata = {
                             'name': item['name'],
                             'mimeType': 'application/vnd.google-apps.shortcut',
-                            'parents': [new_subfolder_id],
+                            'parents': [parent_id],
                             'shortcutDetails': {
                                 'targetId': item['id']
                             }
