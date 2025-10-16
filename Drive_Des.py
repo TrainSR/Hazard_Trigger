@@ -139,31 +139,28 @@ with tab1:
             if not parent_id:
                 st.error("❌ Không thể trích xuất ID từ link folder.")
             else:
-                try:
-                    # 2. Lấy danh sách file trong folder gốc (không đệ quy)
-                    files = drive_ops.list_folder_contents_recursive(parent_id)
-                    file_count = 0
+                # 2. Lấy danh sách file trong folder gốc (không đệ quy)
+                files = drive_ops.list_folder_contents_recursive(parent_id)
+                file_count = 0
 
-                    # 3. Tạo shortcut
-                    for item in files:
-                        if item.get("mimeType") in [
-                            "application/vnd.google-apps.folder",
-                            "application/vnd.google-apps.shortcut"
-                        ]:
-                            continue
+                # 3. Tạo shortcut
+                for item in files:
+                    if item.get("mimeType") in [
+                        "application/vnd.google-apps.folder",
+                        "application/vnd.google-apps.shortcut"
+                    ]:
+                        continue
 
-                        shortcut_metadata = {
-                            'name': item['name'],
-                            'mimeType': 'application/vnd.google-apps.shortcut',
-                            'parents': [parent_id],
-                            'shortcutDetails': {
-                                'targetId': item['id']
-                            }
+                    shortcut_metadata = {
+                        'name': item['name'],
+                        'mimeType': 'application/vnd.google-apps.shortcut',
+                        'parents': [parent_id],
+                        'shortcutDetails': {
+                            'targetId': item['id']
                         }
-                        drive_service.files().create(body=shortcut_metadata).execute()
-                        file_count += 1
+                    }
+                    drive_service.files().create(body=shortcut_metadata).execute()
+                    file_count += 1
 
-                    st.success(f"✅ Đã tạo {file_count} shortcut trong subfolder `{new_folder_name}`.")
+                st.success(f"✅ Đã tạo {file_count} shortcut.")
 
-                except Exception as e:
-                    st.error(f"❌ Lỗi: {e}")
