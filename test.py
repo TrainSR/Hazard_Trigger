@@ -37,27 +37,6 @@ def merge_lists(include_list, include_num):
     return result_list, [", ".join(result_num[item]) for item in result_list]
 
 
-def map_index_to_yaml_flat(index, yaml_data):
-    flat_list = []
-    yaml_keys = list(yaml_data.keys())
-
-    for d in index:
-        key, num = next(iter(d.items()))
-
-        if key in yaml_data:
-            chosen_key = key
-        else:
-            chosen_key = random.choice(yaml_keys) if yaml_keys else None
-
-        if chosen_key:
-            items = yaml_data[chosen_key]
-            if items:
-                sampled = random.sample(items, min(num, len(items)))
-                flat_list.extend(sampled)
-
-    return flat_list
-
-
 def main():
     Included_Sorted = set()
     Instructions_List = []
@@ -191,11 +170,18 @@ def main():
                                     # --- YAML ---
                                     yaml_data = drive_ops.extract_yaml(navigate_file_content)
                                     if yaml_data:
+                                        def process_value(v):
+                                            if isinstance(v, str) and "~~" in v:
+                                                return v.split("~~", 1)[1].strip()
+                                            return v
+
                                         for key, value in yaml_data.items():
                                             if key.startswith("Prompt") and isinstance(value, list):
-                                                Prompt.append(random.choice(value))
-                                        Negative.extend(yaml_data.get("Negative", []))
-                                        Default_Prompt_Neo.extend(yaml_data.get("Z_LoraPrompt", []))
+                                                processed_list = [process_value(v) for v in value]
+                                                Prompt.append(random.choice(processed_list))
+
+                                        Negative.extend([process_value(v) for v in yaml_data.get("Negative", [])])
+                                        Default_Prompt_Neo.extend([process_value(v) for v in yaml_data.get("Z_LoraPrompt", [])])
 
                                     call_lines = drive_ops.extract_bullet_items_from_section(navigate_file_content, "Call")
                                     for line in call_lines:
@@ -623,8 +609,8 @@ def main():
                     all_prompts.append(Init_Prompt)
                 if serie_prompt:
                     all_prompts.extend([item.strip().strip(",") for item in serie_prompt if item])
-                all_prompts.extend(Sorted_Compo_Prompt)
                 all_prompts.append(Lora_Prompt)
+                all_prompts.extend(Sorted_Compo_Prompt)
                 seen = set()
                 cleaned_all_prompts = [p for p in all_prompts if p]
                 unique_prompts = [p for p in cleaned_all_prompts if not (p in seen or seen.add(p))]
