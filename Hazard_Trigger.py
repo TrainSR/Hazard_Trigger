@@ -484,7 +484,7 @@ def main():
                                     if (base_name in Include_List) or (base_name in tuple(call_list.keys())):
                                         default_files.append(f)
                                         if base_name in tuple(call_list.keys()):
-                                            so_luong = int(call_list[basename]) if call_list[basename] else 1
+                                            so_luong = int(call_list[base_name]) if call_list[base_name] else 1
                                             selected_number.append(so_luong)
                                             del call_list[base_name]
 
