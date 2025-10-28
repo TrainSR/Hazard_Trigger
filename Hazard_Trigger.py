@@ -55,10 +55,38 @@ def main():
     Default_Prompt_Neo = []
     Sorted_Compo_Prompt = []
     Line_True = False
+
+
     with st.sidebar.expander("Change"):
         important_change = st.checkbox("Thay đổi Important", key="important_change")
         sorted_change = st.checkbox("Thay đổi Sorted", key="sorted_change")
     st.title("Hazard Trigger")
+    tab_labels = ["🎮 Gacha Chính", "Instruct", "Sorted_Components", "Prompt Sorting"]
+    tabs = st.tabs(tab_labels)
+
+    with tabs[3]:
+        user_prompts = st.text_area("Nhập nhiều dòng prompt (mỗi dòng là 1 nhóm):", value="", key="multi_line_prompt")
+        
+        # Chia từng dòng, loại bỏ dòng trống
+        lines = [line.strip() for line in user_prompts.splitlines() if line.strip()]
+        
+        if lines:
+            # Tách từng dòng thành list (split theo dấu ,) và lọc trùng, giữ thứ tự
+            split_lines = [list(dict.fromkeys([s.strip() for s in line.split(",") if s.strip()])) for line in lines]
+            
+            # Tìm phần tử chung giữa tất cả các dòng (giữ thứ tự theo dòng đầu tiên)
+            common_elements = [item for item in split_lines[0] if all(item in sub for sub in split_lines[1:])]
+            
+            # Tạo danh sách các dòng sau khi loại bỏ phần tử chung
+            remaining_lines = [[item for item in sub if item not in common_elements] for sub in split_lines]
+            
+            # Hiển thị kết quả
+            st.markdown("**Phần tử chung:**")
+            st.code(", ".join(common_elements) if common_elements else "(Không có phần tử chung)")
+            
+            st.markdown("**Các dòng sau khi loại bỏ phần tử chung:**")
+            for idx, line in enumerate(remaining_lines, start=1):
+                st.code(", ".join(line) if line else "(Trống)", language="text")
 
     folder_id = drive_ops.select_working_folder()
     if folder_id:
@@ -372,8 +400,6 @@ def main():
                     Navigate_Exclusive = []
                     Prior_Level = []
                     Prior_Level_Default = []
-        tab_labels = ["🎮 Gacha Chính", "Instruct", "Sorted_Components", "Prompt Sorting"]
-        tabs = st.tabs(tab_labels)
 
 
         # Bổ sung xử lý Sorted_Components
@@ -569,22 +595,6 @@ def main():
                         st.markdown("---")
                         Line_True = False
 
-        with tabs[3]:
-            user_prompt = st.text_input("Prompt: ", value="", key="classsing_prompting")
-            stripped_prompt_to_classify = [s.strip() for s in user_prompt.split(",") if s.strip()]
-            # Tạo sorted_dict rỗng
-            unique_lst = list(dict.fromkeys(stripped_prompt_to_classify))
-            st.code(", ".join(map(str, unique_lst)))
-            Prior_Cate_List = sorted(Prior_Cate_List, key=lambda x: x[1])
-            dfOP = pd.DataFrame(Prior_Cate_List, columns=["Col", "SortKey", "Row"])
-
-            pivot = dfOP.pivot_table(
-                index="Row",
-                columns="Col",
-                values="SortKey",
-                aggfunc=lambda x: ", ".join(sorted(set(x)))  # gộp thành chuỗi, bỏ trùng
-            )
-            st.table(pivot)
         # Tab Gacha Chính
         with tabs[0]:
             Init_Prompt = st.text_input("Prompt Gốc: ", value="", key="input_init_intro")
