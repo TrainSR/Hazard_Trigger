@@ -4,8 +4,54 @@ import streamlit as st
 import re
 from .auth import get_drive_service
 from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseUpload
 import io
 import yaml
+
+def get_file_metadata(file_id):
+    return drive_service.files().get(
+        fileId=file_id,
+        fields="id, name, mimeType, description, createdTime"
+    ).execute()
+def history_description(file_id: str, data_str: str):
+    """
+    Ghi lịch sử vào phần mô tả (description) của 1 file Drive.
+    Chỉ append mà không đụng tới nội dung file.
+    """
+    # --- Lấy mô tả hiện tại ---
+    try:
+        metadata = drive_service.files().get(
+            fileId=file_id,
+            fields="description"
+        ).execute()
+        old_desc = metadata.get("description", "") or ""
+    except Exception:
+        old_desc = ""
+
+    # --- Tạo mô tả mới ---
+    new_desc = old_desc.strip()
+    if new_desc:
+        new_desc += "\n" + data_str
+    else:
+        new_desc = data_str
+
+    # --- Cập nhật mô tả ---
+    drive_service.files().update(
+        fileId=file_id,
+        body={"description": data_str}
+    ).execute()
+
+    return data_str
+
+
+
+def get_file_id_from_link(url):
+    try:
+        start = url.index("/d/") + 3
+        end = url.index("/view", start)
+        return url[start:end]
+    except ValueError:
+        return None
 
 def get_images_in_folder(folder_id):
     """
